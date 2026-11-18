@@ -3,7 +3,6 @@
 //// Example snippet showing how to store custom types using JSON strings.
 
 import dream_ets/config
-import dream_ets/internal
 import dream_ets/operations
 import dream_ets/table
 import gleam/dynamic
@@ -23,7 +22,7 @@ fn encode_user(user: User) -> dynamic.Dynamic {
     #("email", json.string(user.email)),
   ])
   |> json.to_string
-  |> internal.to_dynamic
+  |> dynamic.string
 }
 
 fn decode_user() -> decode.Decoder(User) {

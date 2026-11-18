@@ -5,24 +5,27 @@
 -module(internal_ffi).
 
 -export([ets_new/2, ets_insert/2, ets_lookup/2, ets_delete_table/1, ets_delete_key/2,
-         ets_delete_object/2, ets_delete_all_objects/1, ets_first/1, ets_next/2, ets_member/2,
-         ets_insert_new/2, ets_take/2, ets_update_element/3, ets_info/1, ets_info_by_name/1,
+         ets_delete_all_objects/1, ets_first/1, ets_next/2, ets_member/2,
+         ets_insert_new/2, ets_take/2, ets_update_element/3,
          ets_match/2, ets_match_object/2, ets_select/2, ets_tab2file/2, ets_file2tab/1,
          to_dynamic/1, wrap_table_ref/1, unwrap_table_ref/1]).
 
-%% Pure wrapper - accepts atom name and list of options (atoms or tuples)
-%% All conversion happens in Gleam before calling this
+%% Creates the table. Options are atoms or tuples, built in Gleam.
+%%
+%% ETS raises badarg both for a name that a named table already uses and for
+%% options that it rejects. When a table with the name exists, the result is
+%% {error, nil}. Otherwise the badarg is raised again with its stack trace.
 ets_new(NameAtom, Options) ->
     try
-        TableId = ets:new(NameAtom, Options),
-        {ok, TableId}
+        {ok, ets:new(NameAtom, Options)}
     catch
-        error:badarg ->
-            {error, badarg};
-        error:system_limit ->
-            {error, system_limit};
-        _:_ ->
-            {error, unknown}
+        error:badarg:Stacktrace ->
+            case ets:info(NameAtom) of
+                undefined ->
+                    erlang:raise(error, badarg, Stacktrace);
+                _ ->
+                    {error, nil}
+            end
     end.
 
 %% Each operation on an existing table runs through with_table/2, so that an
@@ -47,12 +50,6 @@ ets_delete_table(TableId) ->
 ets_delete_key(TableId, Key) ->
     with_table(TableId, fun() ->
         ets:delete(TableId, Key),
-        {ok, nil}
-    end).
-
-ets_delete_object(TableId, Object) ->
-    with_table(TableId, fun() ->
-        ets:delete_object(TableId, Object),
         {ok, nil}
     end).
 
@@ -100,23 +97,6 @@ ets_update_element(TableId, Key, {Pos, Value}) ->
                 {error, not_found}
         end
     end).
-
-ets_info(TableId) ->
-    case ets:info(TableId) of
-        undefined ->
-            {error, not_found};
-        Info ->
-            {ok, Info}
-    end.
-
-%% Check if a named table exists by name atom
-ets_info_by_name(NameAtom) ->
-    case ets:info(NameAtom) of
-        undefined ->
-            {error, not_found};
-        Info ->
-            {ok, Info}
-    end.
 
 %% Pattern matching - returns list of matches
 ets_match(TableId, Pattern) ->
@@ -199,8 +179,6 @@ missing_table_or(TableId, OtherError) ->
 %% Format error reason as string
 format_error(Reason) when is_atom(Reason) ->
     atom_to_binary(Reason, utf8);
-format_error(Reason) when is_list(Reason) ->
-    iolist_to_binary(io_lib:format("~p", [Reason]));
 format_error(Reason) ->
     iolist_to_binary(io_lib:format("~p", [Reason])).
 

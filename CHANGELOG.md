@@ -48,7 +48,11 @@ the same way. Code that matched on `EtsFfiError` must handle
 
 ### Testing
 
-- 104 tests, 0 failed, in about 0.3 seconds. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.17.0.
+- 232 tests, 0 failed, in about 0.1 seconds, with the coverage report on. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
+
+### Changed
+
+- Moved to its own repository.
 
 ## 2.0.0 - 2025-12-08
 
