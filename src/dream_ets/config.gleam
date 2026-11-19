@@ -1163,7 +1163,9 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 /// - `Error(TableAlreadyExists)`: A table with this name already exists
 /// - `Error(InvalidKey)`: Key encoder/decoder not set
 /// - `Error(InvalidValue)`: Value encoder/decoder not set
-/// - `Error(OperationFailed)`: ETS creation failed
+/// - `Error(OperationFailed("ETS rejected the table options: badarg"))`: ETS
+///   rejected the table options (for example, `keypos(0)`). The text after the
+///   colon is the reason that ETS gave
 ///
 /// ## Example
 ///
@@ -1200,7 +1202,7 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 /// 1. A table with the same name already exists
 /// 2. Key encoder/decoder was not configured
 /// 3. Value encoder/decoder was not configured
-/// 4. ETS table creation fails for any reason
+/// 4. ETS rejects the table options (`OperationFailed`)
 ///
 /// ## See Also
 ///
@@ -1393,5 +1395,14 @@ fn create_table_with_options(
     encoder_v,
     decoder_v,
   ))
-  |> result.replace_error(table.TableAlreadyExists)
+  |> result.map_error(new_table_error_to_ets_error)
+}
+
+fn new_table_error_to_ets_error(
+  error: internal.NewTableError,
+) -> table.EtsError {
+  case error {
+    internal.NameInUse -> table.TableAlreadyExists
+    internal.OptionsRejected(message) -> table.OperationFailed(message)
+  }
 }

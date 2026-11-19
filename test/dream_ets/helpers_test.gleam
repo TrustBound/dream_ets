@@ -3,12 +3,14 @@
 
 import dream_ets/helpers
 import dream_ets/operations
-import dream_ets/table.{TableAlreadyExists, TableNotFound}
+import dream_ets/table.{OperationFailed, TableAlreadyExists, TableNotFound}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/types.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/deleted_table.{deleted_counter}
 import fixtures/ets_info.{table_info}
+import fixtures/guarded_table.{protected_counter}
+import fixtures/other_process
 import gleam/option
 import gleam/result
 import matchers/extract_table_name.{extract_table_name}
@@ -311,6 +313,100 @@ pub fn tests() -> TestSuite(Nil) {
         |> be_equal(Ok(option.Some(-7)))
         |> or_fail_with("Should store -7")
       }),
+    ]),
+    group("refused operations", [
+      it(
+        "increment returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              protected_counter("refused_increment")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { helpers.increment(counter, "hits") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "increment_by returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              protected_counter("refused_increment_by")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { helpers.increment_by(counter, "hits", 5) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "decrement returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              protected_counter("refused_decrement")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { helpers.decrement(counter, "hits") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "decrement_by returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              protected_counter("refused_decrement_by")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { helpers.decrement_by(counter, "hits", 5) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
     ]),
   ])
 }

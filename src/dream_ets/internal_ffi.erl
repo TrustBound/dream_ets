@@ -14,23 +14,29 @@
 %%
 %% ETS raises badarg both for a name that a named table already uses and for
 %% options that it rejects. When a table with the name exists, the result is
-%% {error, nil}. Otherwise the badarg is raised again with its stack trace.
+%% {error, name_in_use}. Otherwise ETS rejected the options, and the result is
+%% {error, {options_rejected, Message}}, where Message gives the reason that
+%% ETS raised.
 ets_new(NameAtom, Options) ->
     try
         {ok, ets:new(NameAtom, Options)}
     catch
-        error:badarg:Stacktrace ->
+        error:Reason ->
             case ets:info(NameAtom) of
                 undefined ->
-                    erlang:raise(error, badarg, Stacktrace);
+                    {error, {options_rejected,
+                             <<"ETS rejected the table options: ",
+                               (format_error(Reason))/binary>>}};
                 _ ->
-                    {error, nil}
+                    {error, name_in_use}
             end
     end.
 
 %% Each operation on an existing table runs through with_table/2, so that an
-%% operation on a table that does not exist returns {error, table_not_found}
-%% and does not crash the calling process.
+%% operation on a table that does not exist returns {error, table_not_found},
+%% an operation that ETS refuses on a table that exists returns
+%% {error, {invalid_operation, Message}}, and neither crashes the calling
+%% process.
 
 ets_insert(TableId, Object) ->
     with_table(TableId, fun() ->
@@ -150,19 +156,21 @@ lookup_result(Objects) ->
 %% lookup and no table can be deleted between a check and the operation.
 %% A deleted table stays deleted, so the check after badarg finds it gone.
 %% (Only if another process creates a new named table with the same name
-%% between the two steps does the check find a table; then badarg is
-%% raised, as before.) When the table exists, the badarg had another cause
-%% and is raised again with its stack trace.
+%% between the two steps does the check find a table; then the result is
+%% the refused-operation error.) When the table exists, ETS refused the
+%% operation for another cause, and the result is
+%% {error, {invalid_operation, <<"ETS refused the operation: badarg">>}}.
 with_table(TableId, Operation) ->
     try
         Operation()
     catch
-        error:badarg:Stacktrace ->
+        error:badarg ->
             case ets:info(TableId) of
                 undefined ->
                     {error, table_not_found};
                 _ ->
-                    erlang:raise(error, badarg, Stacktrace)
+                    {error, {invalid_operation,
+                             <<"ETS refused the operation: badarg">>}}
             end
     end.
 

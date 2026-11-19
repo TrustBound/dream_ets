@@ -15,6 +15,7 @@ import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/types.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/deleted_table.{deleted_string_table}
+import fixtures/guarded_table.{private_string_table, protected_string_table}
 import fixtures/key_only_file
 import fixtures/other_process
 import gleam/dynamic
@@ -1350,6 +1351,407 @@ pub fn tests() -> TestSuite(Nil) {
         |> be_equal(Ok(option.Some("value")))
         |> or_fail_with("Should restore the saved value")
       }),
+    ]),
+    group("refused operations", [
+      it(
+        "set returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_set")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.set(protected, "key", "value") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "get returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_get")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.get(private, "key") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "delete returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_delete")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.delete(protected, "key") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "member returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_member")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.member(private, "key") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "delete_table returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_delete_table")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.delete_table(protected) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused delete")
+        },
+      ),
+      it(
+        "size returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_size")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.size(private) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "keys returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_keys")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.keys(private) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "values returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_values")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.values(private) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "to_list returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_to_list")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.to_list(private) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "insert_new returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_insert_new")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() {
+              operations.insert_new(protected, "key", "value")
+            })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "take returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_take")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.take(protected, "key") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "update_element returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_update_element")
+              |> result.replace_error("create failed"),
+            )
+            use _ <- result.try(
+              operations.set(protected, "key", "old")
+              |> result.replace_error("set failed"),
+            )
+
+            // Act
+            other_process.run(fn() {
+              operations.update_element(
+                protected,
+                "key",
+                2,
+                dynamic.string("new"),
+              )
+            })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "delete_all_objects returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_delete_all")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.delete_all_objects(protected) })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+      it(
+        "match returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_match")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() {
+              operations.match(
+                private,
+                dynamic.array([
+                  atom.to_dynamic(atom.create("$1")),
+                  atom.to_dynamic(atom.create("$2")),
+                ]),
+              )
+            })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "match_object returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_match_object")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() {
+              operations.match_object(
+                private,
+                dynamic.array([
+                  atom.to_dynamic(atom.create("$1")),
+                  atom.to_dynamic(atom.create("$2")),
+                ]),
+              )
+            })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
+      it(
+        "select returns OperationFailed for a private table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use private <- result.try(
+              private_string_table("refused_select")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() {
+              operations.select(private, dynamic.list([]))
+            })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused read")
+        },
+      ),
     ]),
   ])
 }

@@ -18,13 +18,22 @@ pub type EtsFfiError {
   EndOfTable
 }
 
-/// Creates the table. Returns `Error(Nil)` when a named table with this
-/// name already exists. ETS raises `badarg` for options that it rejects.
+/// Why ETS did not create a table.
+pub type NewTableError {
+  /// A named table with this name already exists.
+  NameInUse
+  /// ETS rejected the table options. The message gives the reason.
+  OptionsRejected(String)
+}
+
+/// Creates the table. Returns `Error(NameInUse)` when a named table with
+/// this name already exists, and `Error(OptionsRejected(message))` when ETS
+/// rejects the options.
 @external(erlang, "internal_ffi", "ets_new")
 fn ets_new(
   name_atom: atom.Atom,
   options: List(dynamic.Dynamic),
-) -> Result(Int, Nil)
+) -> Result(Int, NewTableError)
 
 @external(erlang, "internal_ffi", "ets_match")
 pub fn ets_match(
@@ -117,12 +126,13 @@ pub fn wrap_table_ref_ffi(table_id: Int) -> EtsTableRef
 @external(erlang, "internal_ffi", "unwrap_table_ref")
 pub fn unwrap_table_ref_ffi(table: EtsTableRef) -> Int
 
-/// Creates a table with the given name and options. Returns `Error(Nil)`
-/// when a named table with this name already exists.
+/// Creates a table with the given name and options. Returns
+/// `Error(NameInUse)` when a named table with this name already exists, and
+/// `Error(OptionsRejected(message))` when ETS rejects the options.
 pub fn new_table(
   name: String,
   options: List(dynamic.Dynamic),
-) -> Result(EtsTableRef, Nil) {
+) -> Result(EtsTableRef, NewTableError) {
   ets_new(atom.create(name), options)
   |> result.map(wrap_table_ref)
 }

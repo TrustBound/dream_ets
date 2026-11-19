@@ -105,6 +105,9 @@ import gleam/result
 /// - `Ok(Nil)`: Successfully set the key-value pair
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -152,6 +155,9 @@ pub fn set(
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
 /// - `Error(DecodeError(error))`: The stored value could not be decoded
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -200,6 +206,9 @@ pub fn get(
 /// - `Ok(Nil)`: Successfully deleted (or key didn't exist)
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -237,6 +246,9 @@ pub fn delete(table: table.Table(k, v), key: k) -> Result(Nil, table.EtsError) {
 /// - `Ok(False)`: Key doesn't exist
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -290,6 +302,9 @@ pub fn member(
 /// - `Ok(Nil)`: Successfully deleted
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   already deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process does not own the table)
 ///
 /// ## Example
 ///
@@ -322,6 +337,9 @@ pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
 /// - `Error(DecodeError)`: A key failed to decode during iteration
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -394,6 +412,9 @@ pub fn size(table: table.Table(k, v)) -> Result(Int, table.EtsError) {
 ///
 /// - `Ok(List)`: All keys successfully decoded
 /// - `Error(DecodeError)`: A key failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -429,6 +450,9 @@ pub fn keys(table: table.Table(k, v)) -> Result(List(k), table.EtsError) {
 ///
 /// - `Ok(List)`: All values successfully decoded
 /// - `Error(DecodeError)`: A value failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -464,6 +488,9 @@ pub fn values(table: table.Table(k, v)) -> Result(List(v), table.EtsError) {
 ///
 /// - `Ok(List)`: All key-value pairs successfully decoded
 /// - `Error(DecodeError)`: A key or value failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
@@ -502,6 +529,9 @@ pub fn to_list(
 /// - `Ok(False)`: Key already existed, no change made
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -612,6 +642,9 @@ pub fn insert_new(
 /// - `Ok(Some(value))`: Key existed, returns the value (now removed from table)
 /// - `Ok(None)`: Key didn't exist (table unchanged)
 /// - `Error(EtsError)`: An error occurred during retrieval or deletion
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -742,6 +775,9 @@ pub fn take(
 /// ## Errors
 ///
 /// - `TableNotFound`: The table does not exist, or no object has this key
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table, or `pos` is not a position of the object)
 ///
 /// ## Example
 ///
@@ -798,6 +834,9 @@ pub fn update_element(
 /// ## Errors
 ///
 /// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table)
 ///
 /// ## Example
 ///
@@ -844,6 +883,9 @@ pub fn delete_all_objects(
 /// ## Errors
 ///
 /// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
 ///
 /// ## Example
 ///
@@ -893,6 +935,9 @@ pub fn match(
 /// ## Errors
 ///
 /// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
 ///
 /// ## Example
 ///
@@ -939,6 +984,9 @@ pub fn match_object(
 /// ## Errors
 ///
 /// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table, or the match specification is not valid)
 ///
 /// ## Example
 ///

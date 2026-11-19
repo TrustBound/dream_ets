@@ -181,6 +181,9 @@ pub fn new_string_table(
 ///
 /// - `Ok(Int)`: The new value after incrementing
 /// - `Error(EtsError)`: An error occurred
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -232,6 +235,9 @@ pub fn increment(
 ///
 /// - `Ok(Int)`: The new value after incrementing
 /// - `Error(EtsError)`: An error occurred
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -308,6 +314,9 @@ fn create_new_counter_key(
 ///
 /// - `Ok(Int)`: The new value after decrementing
 /// - `Error(EtsError)`: An error occurred
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
@@ -359,6 +368,9 @@ pub fn decrement(
 ///
 /// - `Ok(Int)`: The new value after decrementing
 /// - `Error(EtsError)`: An error occurred
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///

@@ -6,7 +6,9 @@
 import dream_ets/config
 import dream_ets/encoders
 import dream_ets/operations
-import dream_ets/table.{InvalidKey, InvalidValue, TableAlreadyExists}
+import dream_ets/table.{
+  InvalidKey, InvalidValue, OperationFailed, TableAlreadyExists,
+}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/types.{type TestSuite}
 import dream_test/unit.{describe, group, it}
@@ -579,6 +581,25 @@ pub fn tests() -> TestSuite(Nil) {
         |> should
         |> be_equal(Error(TableAlreadyExists))
         |> or_fail_with("Should return TableAlreadyExists")
+      }),
+      it("returns OperationFailed when ETS rejects the options", fn() {
+        // Arrange
+        let config_value =
+          config.new("config_create_rejected")
+          |> config.key_string()
+          |> config.value_string()
+          |> config.keypos(0)
+
+        // Act
+        let result = config.create(config_value)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Error(OperationFailed("ETS rejected the table options: badarg")),
+        )
+        |> or_fail_with("Should return OperationFailed for key position 0")
       }),
     ]),
   ])

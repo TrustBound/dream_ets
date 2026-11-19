@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `select`, `save_to_file` (it returned `Error(OperationFailed("badtab"))`)
   and the counter helpers `increment`, `increment_by`, `decrement` and
   `decrement_by`. A `badarg` with another cause, on a table that exists (for
-  example a bad match specification), is raised again as before.
+  example a bad match specification), now returns `OperationFailed` (see
+  Changed).
 
 ### Breaking Changes
 
@@ -48,11 +49,22 @@ the same way. Code that matched on `EtsFfiError` must handle
 
 ### Testing
 
-- 232 tests, 0 failed, in about 0.1 seconds, with the coverage report on. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
+- 262 tests, 0 failed, in about 0.07 seconds, with the coverage report on. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
 
 ### Changed
 
 - Moved to its own repository.
+- Rejected table options and refused operations now return
+  `OperationFailed` instead of crashing the caller. When ETS rejects the
+  options of `config.create` (for example `config.keypos(0)`), the result is
+  `Error(OperationFailed("ETS rejected the table options: badarg"))`, with
+  the reason that ETS gave. When ETS refuses an operation on a table that
+  exists (for example a write to a protected table, or any operation on a
+  private table, from a process that does not own it), the operations and
+  the counter helpers return
+  `Error(OperationFailed("ETS refused the operation: badarg"))`. In the
+  `dream_ets/internal` module, `new_table` now returns
+  `Result(EtsTableRef, NewTableError)`.
 
 ## 2.0.0 - 2025-12-08
 
