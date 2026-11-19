@@ -4,6 +4,7 @@
 
 import gleam/dynamic
 import gleam/erlang/atom
+import gleam/result
 
 pub type EtsTableRef
 
@@ -12,62 +13,27 @@ pub type EtsFfiError {
   NotFound
   /// The table does not exist (for example, it was deleted)
   TableNotFound
-  AlreadyExists
   InvalidOperation(String)
   EmptyTable
   EndOfTable
 }
 
+/// Why ETS did not create a table.
+pub type NewTableError {
+  /// A named table with this name already exists.
+  NameInUse
+  /// ETS rejected the table options. The message gives the reason.
+  OptionsRejected(String)
+}
+
+/// Creates the table. Returns `Error(NameInUse)` when a named table with
+/// this name already exists, and `Error(OptionsRejected(message))` when ETS
+/// rejects the options.
 @external(erlang, "internal_ffi", "ets_new")
-fn ets_new_ffi(
+fn ets_new(
   name_atom: atom.Atom,
   options: List(dynamic.Dynamic),
-) -> Result(Int, EtsFfiError)
-
-pub fn ets_new(
-  name: String,
-  options: List(dynamic.Dynamic),
-) -> Result(Int, EtsFfiError) {
-  let name_atom = atom.create(name)
-  case ets_new_ffi(name_atom, options) {
-    Ok(table_id) -> Ok(table_id)
-    Error(err) -> handle_new_table_error(name_atom, err)
-  }
-}
-
-fn handle_new_table_error(
-  name_atom: atom.Atom,
-  err: EtsFfiError,
-) -> Result(Int, EtsFfiError) {
-  case err {
-    _ -> check_if_duplicate_table(name_atom, err)
-  }
-}
-
-fn check_if_duplicate_table(
-  name_atom: atom.Atom,
-  original_error: EtsFfiError,
-) -> Result(Int, EtsFfiError) {
-  // Try to get table info by name (named tables can be accessed by name atom)
-  // If we can get info, table exists (duplicate)
-  // If not, the original error was from invalid options
-  case check_table_exists_by_name(name_atom) {
-    True -> Error(AlreadyExists)
-    False -> Error(original_error)
-  }
-}
-
-fn check_table_exists_by_name(name_atom: atom.Atom) -> Bool {
-  case ets_info_ffi_by_name(name_atom) {
-    Ok(_) -> True
-    Error(_) -> False
-  }
-}
-
-@external(erlang, "internal_ffi", "ets_info_by_name")
-fn ets_info_ffi_by_name(
-  name_atom: atom.Atom,
-) -> Result(List(dynamic.Dynamic), EtsFfiError)
+) -> Result(Int, NewTableError)
 
 @external(erlang, "internal_ffi", "ets_match")
 pub fn ets_match(
@@ -114,12 +80,6 @@ pub fn ets_delete_key(
   key: dynamic.Dynamic,
 ) -> Result(Nil, EtsFfiError)
 
-@external(erlang, "internal_ffi", "ets_delete_object")
-pub fn ets_delete_object(
-  table_id: Int,
-  object: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError)
-
 @external(erlang, "internal_ffi", "ets_delete_all_objects")
 pub fn ets_delete_all_objects(table_id: Int) -> Result(Nil, EtsFfiError)
 
@@ -157,9 +117,6 @@ pub fn ets_update_element(
   update_tuple: dynamic.Dynamic,
 ) -> Result(Nil, EtsFfiError)
 
-@external(erlang, "internal_ffi", "ets_info")
-pub fn ets_info(table_id: Int) -> Result(List(dynamic.Dynamic), EtsFfiError)
-
 @external(erlang, "internal_ffi", "to_dynamic")
 pub fn to_dynamic(value: a) -> dynamic.Dynamic
 
@@ -169,14 +126,15 @@ pub fn wrap_table_ref_ffi(table_id: Int) -> EtsTableRef
 @external(erlang, "internal_ffi", "unwrap_table_ref")
 pub fn unwrap_table_ref_ffi(table: EtsTableRef) -> Int
 
+/// Creates a table with the given name and options. Returns
+/// `Error(NameInUse)` when a named table with this name already exists, and
+/// `Error(OptionsRejected(message))` when ETS rejects the options.
 pub fn new_table(
   name: String,
   options: List(dynamic.Dynamic),
-) -> Result(EtsTableRef, EtsFfiError) {
-  case ets_new(name, options) {
-    Ok(table_id) -> Ok(wrap_table_ref(table_id))
-    Error(err) -> Error(err)
-  }
+) -> Result(EtsTableRef, NewTableError) {
+  ets_new(atom.create(name), options)
+  |> result.map(wrap_table_ref)
 }
 
 pub fn insert(
@@ -206,14 +164,6 @@ pub fn delete_key(
 ) -> Result(Nil, EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_delete_key(table_id, key)
-}
-
-pub fn delete_object(
-  table: EtsTableRef,
-  object: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError) {
-  let table_id = unwrap_table_ref(table)
-  ets_delete_object(table_id, object)
 }
 
 pub fn delete_all_objects(table: EtsTableRef) -> Result(Nil, EtsFfiError) {
@@ -269,13 +219,6 @@ pub fn update_element(
   ets_update_element(table_id, key, update_tuple)
 }
 
-pub fn table_info(
-  table: EtsTableRef,
-) -> Result(List(dynamic.Dynamic), EtsFfiError) {
-  let table_id = unwrap_table_ref(table)
-  ets_info(table_id)
-}
-
 pub fn match(
   table: EtsTableRef,
   pattern: dynamic.Dynamic,
@@ -309,10 +252,8 @@ pub fn tab2file(
 }
 
 pub fn file2tab(filename: String) -> Result(EtsTableRef, EtsFfiError) {
-  case ets_file2tab(filename) {
-    Ok(table_id) -> Ok(wrap_table_ref(table_id))
-    Error(err) -> Error(err)
-  }
+  ets_file2tab(filename)
+  |> result.map(wrap_table_ref)
 }
 
 // Private helper functions

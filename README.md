@@ -1,15 +1,26 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/TrustBound/dream/main/ricky_and_lucy.png" alt="Dream Logo" width="200">
+  <img src="https://raw.githubusercontent.com/TrustBound/dream/main/ricky_and_lucy.png" alt="Ricky Moony and Lucy, a moon shaped mascot for Dream with the star shaped mascot for Gleam, each with cute cartoon eyes and a smile" width="200">
+
+<b>Type-safe ETS (Erlang Term Storage) for Gleam</b>
+
 </div>
+
+<br />
 
 <div align="center">
   <a href="https://hex.pm/packages/dream_ets">
     <img src="https://img.shields.io/hexpm/v/dream_ets" alt="Hex Package">
   </a>
+  <a href="https://github.com/TrustBound/dream_ets/releases">
+    <img src="https://img.shields.io/github/v/release/TrustBound/dream_ets?label=Release" alt="Latest Release">
+  </a>
   <a href="https://hexdocs.pm/dream_ets">
     <img src="https://img.shields.io/badge/hex-docs-lightgreen.svg" alt="HexDocs">
   </a>
-  <a href="https://github.com/TrustBound/dream/blob/main/modules/ets/LICENSE.md">
+  <a href="https://github.com/TrustBound/dream_ets/actions/workflows/ci.yml?query=branch%3Amain">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TrustBound/dream_ets/badges/coverage.json" alt="Coverage">
+  </a>
+  <a href="https://github.com/TrustBound/dream_ets/blob/main/LICENSE.md">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
   </a>
   <a href="https://gleam.run">
@@ -17,9 +28,9 @@
   </a>
 </div>
 
-# dream_ets
+<br />
 
-**Type-safe ETS (Erlang Term Storage) for Gleam.**
+# dream_ets
 
 A standalone module providing a type-safe interface to Erlang's ETS in-memory storage. Features a builder pattern for table configuration, type-safe operations, and comprehensive error handling. Built with the same quality standards as [Dream](https://github.com/TrustBound/dream), but completely independent—use it in any Gleam project.
 
@@ -43,7 +54,7 @@ gleam add dream_ets
 
 ## Quick Start
 
-### Creating a Table <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/creating_tables.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Creating a Table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/creating_tables.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -72,7 +83,7 @@ pub fn create_string_table() -> Result(String, table.EtsError) {
 }
 ```
 
-### Basic Operations <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/basic_operations.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Basic Operations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/basic_operations.gleam#L5-L24"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -97,7 +108,7 @@ pub fn store_and_retrieve() -> Result(String, table.EtsError) {
 }
 ```
 
-### Counter Tables <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/counter_tables.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Counter Tables <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/counter_tables.gleam#L5-L18"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -122,11 +133,10 @@ pub fn increment_page_views() -> Result(Int, table.EtsError) {
 
 Store your own types using JSON encoding:
 
-#### Store a user as JSON <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/custom_types.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+#### Store a user as JSON <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/custom_types.gleam#L5-L63"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
-import dream_ets/internal
 import dream_ets/operations
 import dream_ets/table
 import gleam/dynamic
@@ -146,7 +156,7 @@ fn encode_user(user: User) -> dynamic.Dynamic {
     #("email", json.string(user.email)),
   ])
   |> json.to_string
-  |> internal.to_dynamic
+  |> dynamic.string
 }
 
 fn decode_user() -> decode.Decoder(User) {
@@ -191,7 +201,7 @@ pub fn store_custom_type() -> Result(String, table.EtsError) {
 
 Use `insert_new()` for atomic "check and insert" operations:
 
-#### Register a username once <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/insert_new.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+#### Register a username once <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/insert_new.gleam#L5-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -222,7 +232,7 @@ pub fn register_user() -> Result(Bool, table.EtsError) {
 }
 ```
 
-### Atomic Operations <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/advanced_operations.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Atomic Operations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/advanced_operations.gleam#L5-L24"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -251,7 +261,7 @@ pub fn atomic_take() -> Result(String, table.EtsError) {
 
 Optimize tables for your workload:
 
-#### Enable read concurrency <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/table_configuration.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+#### Enable read concurrency <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/table_configuration.gleam#L5-L29"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -289,7 +299,7 @@ pub fn configure_table() -> Result(String, table.EtsError) {
 - `table_type(Set | OrderedSet | Bag | DuplicateBag)` - Key handling
 - `access(Public | Protected | Private)` - Process access control
 
-### Type Safety <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/type_safe_operations.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Type Safety <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/type_safe_operations.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -318,7 +328,7 @@ pub fn type_safe_storage() -> Result(String, table.EtsError) {
 }
 ```
 
-### Persistence <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/table_persistence.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Persistence <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/table_persistence.gleam#L5-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -411,7 +421,7 @@ All operations that take a table return `Result` types. Common errors:
 - `DecodeError(details)` - Failed to decode data (corruption or encoder mismatch)
 - `OperationFailed(message)` - General operation failure
 
-#### Handle each lookup result <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/error_handling.gleam#L16-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+#### Handle each lookup result <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/error_handling.gleam#L16-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
   case operations.get(users, key) {
@@ -429,7 +439,7 @@ All operations that take a table return `Result` types. Common errors:
 
 ## Use Cases
 
-### Session Cache <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/session_cache.gleam#L12-L19"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Session Cache <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/session_cache.gleam#L12-L19"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
   use sessions <- result.try(
@@ -442,14 +452,14 @@ All operations that take a table return `Result` types. Common errors:
   use _ <- result.try(operations.set(sessions, "session:abc", "user:alice"))
 ```
 
-### Page View Analytics <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/page_view_analytics.gleam#L10-L11"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Page View Analytics <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/page_view_analytics.gleam#L10-L11"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
   use counter <- result.try(helpers.new_counter("analytics"))
   use views <- result.try(helpers.increment(counter, "homepage"))
 ```
 
-### Distributed Locks <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/distributed_locks.gleam#L16-L20"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Distributed Locks <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/distributed_locks.gleam#L16-L20"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
   case operations.insert_new(locks, resource_id, owner_id) {
@@ -459,7 +469,7 @@ All operations that take a table return `Result` types. Common errors:
   }
 ```
 
-### Work Queue <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/work_queue.gleam#L13-L17"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Work Queue <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/work_queue.gleam#L13-L17"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
   case operations.take(queue, "next_job") {
@@ -478,25 +488,17 @@ All operations that take a table return `Result` types. Common errors:
 
 ## Design Principles
 
-This module follows the same quality standards as [Dream](https://github.com/TrustBound/dream):
-
-- **Explicit over implicit** - No hidden behavior, no magic
-- **Result-based errors** - All operations return `Result` to force error handling
-- **No closures** - All dependencies are explicit parameters
-- **Simple over clever** - Code should be obvious and boring
-- **Type-safe** - Leverage Gleam's type system fully
-- **Black-box testing** - Test public interfaces, 100% coverage
+This module follows [Dream's design principles](https://github.com/TrustBound/dream/blob/release/3.0.0/docs/reference/design-principles.md).
 
 ## All Examples Are Tested
 
 Every code example in this README comes from `test/snippets/` and is verified by our test suite. You can run them yourself:
 
 ```bash
-cd modules/ets
 gleam test
 ```
 
-See [test/snippets/](test/snippets/) for complete, runnable examples.
+See [test/snippets/](https://github.com/TrustBound/dream_ets/tree/main/test/snippets) for complete, runnable examples.
 
 ## About Dream
 
@@ -504,4 +506,10 @@ This module was originally built for the [Dream](https://github.com/TrustBound/d
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT — see [LICENSE.md](https://github.com/TrustBound/dream_ets/blob/main/LICENSE.md)
+
+---
+
+<div align="center">
+  <sub>Built in Gleam, on the BEAM, by the <a href="https://github.com/trustbound/dream">Dream Team</a> ❤️</sub>
+</div>
