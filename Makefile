@@ -14,13 +14,9 @@ build:
 format:
 	@gleam format src test
 
-# Run every check that CI runs: format, build, tests and docs
+# Format check, build, tests, docs build and snippet check (what CI runs)
 check:
-	@gleam format --check src test
-	@gleam build
-	@gleam test
-	@gleam docs build
-	@gleam run -m dream_snippets
+	@sh scripts/check.sh
 
 # Check that each code block in the docs matches a tested snippet
 check-snippets:

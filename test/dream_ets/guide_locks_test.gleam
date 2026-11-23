@@ -1,6 +1,7 @@
 //// Tests for the snippets of the locks and work queues guide
 //// (docs/guides/locks-and-queues.md). Each test runs a snippet and asserts
-//// the exact value that the guide shows.
+//// the exact value that the guide shows. The output that the guide shows is
+//// compared with the files in test/outputs.
 
 import dream_ets/helpers
 import dream_ets/operations
@@ -9,9 +10,11 @@ import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
 import fixtures/other_process
+import fixtures/output_file
 import gleam/list
 import gleam/option.{None}
-import snippets/guide_locks_lock.{is_locked, try_lock}
+import gleam/string
+import snippets/guide_locks_lock.{is_locked, try_lock, unlock}
 import snippets/guide_locks_outbox
 import snippets/guide_locks_queue
 import snippets/guide_locks_race
@@ -19,32 +22,34 @@ import snippets/guide_locks_workers
 
 pub fn tests() -> TestSuite {
   describe("locks and work queues guide", [
-    it("step 1: the first try_lock gets the lock", fn() {
+    it("step 1: the lock functions give the output that the guide shows", fn() {
       // Arrange
-      let assert Ok(locks) = helpers.new_string_table("guide_locks_first")
+      let assert Ok(locks) = helpers.new_string_table("guide_locks_lock")
 
       // Act
-      let locked = try_lock(locks, "report:42", "worker:1")
+      let first = try_lock(locks, "report:42", "worker:1")
+      let second = try_lock(locks, "report:42", "worker:2")
+      let wrong_owner = unlock(locks, "report:42", "worker:2")
+      let owner = unlock(locks, "report:42", "worker:1")
+      let locked = is_locked(locks, "report:42")
 
       // Assert
-      locked
+      output_file.calls([
+        #("try_lock(locks, \"report:42\", \"worker:1\")", string.inspect(first)),
+        #(
+          "try_lock(locks, \"report:42\", \"worker:2\")",
+          string.inspect(second),
+        ),
+        #(
+          "unlock(locks, \"report:42\", \"worker:2\")",
+          string.inspect(wrong_owner),
+        ),
+        #("unlock(locks, \"report:42\", \"worker:1\")", string.inspect(owner)),
+        #("is_locked(locks, \"report:42\")", string.inspect(locked)),
+      ])
       |> should
-      |> be_equal(Ok(True))
-      |> or_fail_with("Expected the lock")
-    }),
-    it("step 1: a second owner does not get a held lock", fn() {
-      // Arrange
-      let assert Ok(locks) = helpers.new_string_table("guide_locks_second")
-      let assert Ok(True) = try_lock(locks, "report:42", "worker:1")
-
-      // Act
-      let locked = try_lock(locks, "report:42", "worker:2")
-
-      // Assert
-      locked
-      |> should
-      |> be_equal(Ok(False))
-      |> or_fail_with("Expected no lock for worker:2")
+      |> be_equal(output_file.read("guide_locks_lock"))
+      |> or_fail_with("Expected the output of guide_locks_lock.txt")
     }),
     it("step 2: one of five racing processes gets the lock", fn() {
       // Act
@@ -76,15 +81,10 @@ pub fn tests() -> TestSuite {
       let claimed = guide_locks_workers.three_workers_empty_the_queue()
 
       // Assert
-      claimed
+      output_file.value(claimed)
       |> should
-      |> be_equal(
-        Ok([
-          "job:001", "job:002", "job:003", "job:004", "job:005", "job:006",
-          "job:007", "job:008", "job:009", "job:010",
-        ]),
-      )
-      |> or_fail_with("Expected each job once")
+      |> be_equal(output_file.read("guide_locks_workers"))
+      |> or_fail_with("Expected the output of guide_locks_workers.txt")
     }),
     it("step 3: claim_next takes the oldest job", fn() {
       // Arrange

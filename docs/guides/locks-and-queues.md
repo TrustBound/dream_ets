@@ -84,6 +84,8 @@ pub fn is_locked(
 
 With an empty `locks` table:
 
+### What the lock functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_locks_lock.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
 try_lock(locks, "report:42", "worker:1")  -> Ok(True)
 try_lock(locks, "report:42", "worker:2")  -> Ok(False)
@@ -255,6 +257,8 @@ fn claim_all(
 ```
 
 `three_workers_empty_the_queue()` returns every job id exactly once:
+
+### What the three workers claim <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_locks_workers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 Ok(["job:001", "job:002", "job:003", "job:004", "job:005", "job:006", "job:007", "job:008", "job:009", "job:010"])

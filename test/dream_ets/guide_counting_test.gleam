@@ -1,6 +1,7 @@
 //// Tests for the snippets of the counting guide
 //// (docs/guides/counting.md). Each test runs a snippet and asserts the
-//// exact value that the guide shows.
+//// exact value that the guide shows. The output that the guide shows is
+//// compared with the files in test/outputs.
 
 import dream_ets/encoders
 import dream_ets/helpers
@@ -10,7 +11,9 @@ import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
 import fixtures/other_process
+import fixtures/output_file
 import gleam/option.{Some}
+import gleam/string
 import snippets/guide_counting_counter_process as counter
 import snippets/guide_counting_many_processes
 import snippets/guide_counting_page_views
@@ -28,62 +31,48 @@ pub fn tests() -> TestSuite {
       |> be_equal(Ok(2))
       |> or_fail_with("Expected two views of /")
     }),
-    it("step 2: views_of returns 0 for a path with no views", fn() {
+    it("step 2: the readers give the output that the guide shows", fn() {
       // Arrange
-      let assert Ok(views) = helpers.new_counter("guide_count_no_views")
-
-      // Act
-      let count = guide_counting_page_views.views_of(views, "/pricing")
-
-      // Assert
-      count
-      |> should
-      |> be_equal(Ok(0))
-      |> or_fail_with("Expected 0")
-    }),
-    it("step 2: report lists every path with its count", fn() {
-      // Arrange
-      let assert Ok(views) = helpers.new_counter("guide_count_report")
+      let assert Ok(views) = helpers.new_counter("guide_count_readers")
       let assert Ok(_) = helpers.increment(views, "/about")
       let assert Ok(_) = helpers.increment(views, "/")
       let assert Ok(_) = helpers.increment(views, "/")
 
       // Act
+      let pricing = guide_counting_page_views.views_of(views, "/pricing")
       let report = guide_counting_page_views.report(views)
 
       // Assert
-      report
+      output_file.calls([
+        #("views_of(views, \"/pricing\")", string.inspect(pricing)),
+        #("report(views)", string.inspect(report)),
+      ])
       |> should
-      |> be_equal(Ok([#("/", 2), #("/about", 1)]))
-      |> or_fail_with("Expected the sorted report")
+      |> be_equal(output_file.read("guide_counting_readers"))
+      |> or_fail_with("Expected the output of guide_counting_readers.txt")
     }),
-    it("step 5: spend returns the credits that are left", fn() {
-      // Arrange
-      let assert Ok(spent) = helpers.new_counter("guide_count_spend")
+    it(
+      "step 5: spend and refund_one give the output that the guide shows",
+      fn() {
+        // Arrange
+        let assert Ok(spent) = helpers.new_counter("guide_count_quota")
 
-      // Act
-      let left = guide_counting_quota.spend(spent, "user:1", 30)
+        // Act
+        let first = guide_counting_quota.spend(spent, "user:1", 30)
+        let refused = guide_counting_quota.spend(spent, "user:1", 80)
+        let refunded = guide_counting_quota.refund_one(spent, "user:1")
 
-      // Assert
-      left
-      |> should
-      |> be_equal(Ok(70))
-      |> or_fail_with("Expected 70 credits left")
-    }),
-    it("step 5: spend refuses a request that costs too much", fn() {
-      // Arrange
-      let assert Ok(spent) = helpers.new_counter("guide_count_refuse")
-      let assert Ok(_) = guide_counting_quota.spend(spent, "user:1", 30)
-
-      // Act
-      let left = guide_counting_quota.spend(spent, "user:1", 80)
-
-      // Assert
-      left
-      |> should
-      |> be_equal(Error(NotEnoughCredits(left: 70)))
-      |> or_fail_with("Expected NotEnoughCredits with 70 left")
-    }),
+        // Assert
+        output_file.calls([
+          #("spend(spent, \"user:1\", 30)", string.inspect(first)),
+          #("spend(spent, \"user:1\", 80)", string.inspect(refused)),
+          #("refund_one(spent, \"user:1\")", string.inspect(refunded)),
+        ])
+        |> should
+        |> be_equal(output_file.read("guide_counting_quota"))
+        |> or_fail_with("Expected the output of guide_counting_quota.txt")
+      },
+    ),
     it("step 5: a refused spend gives its credits back", fn() {
       // Arrange
       let assert Ok(spent) = helpers.new_counter("guide_count_give_back")
@@ -112,20 +101,6 @@ pub fn tests() -> TestSuite {
       |> should
       |> be_equal(Error(NotEnoughCredits(left: 0)))
       |> or_fail_with("Expected NotEnoughCredits with 0 left")
-    }),
-    it("step 5: refund_one gives one credit back", fn() {
-      // Arrange
-      let assert Ok(spent) = helpers.new_counter("guide_count_refund_one")
-      let assert Ok(_) = guide_counting_quota.spend(spent, "user:1", 30)
-
-      // Act
-      let total = guide_counting_quota.refund_one(spent, "user:1")
-
-      // Assert
-      total
-      |> should
-      |> be_equal(Ok(29))
-      |> or_fail_with("Expected 29 credits spent")
     }),
     it("step 3: ten processes that increment 1000 times each give 10000", fn() {
       // Act

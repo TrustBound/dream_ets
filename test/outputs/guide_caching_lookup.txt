@@ -1,0 +1,2 @@
+lookup(cache, "user:1", 1200)  -> Ok(Some(Profile("Ada", "pro")))
+lookup(cache, "user:1", 1300)  -> Ok(None)

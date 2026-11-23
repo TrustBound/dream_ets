@@ -91,7 +91,7 @@ pub fn describe_user(
 
 ## Testing
 
-- 347 tests run, 0 failed, in 0.41 to 0.92 seconds over three runs with the coverage report on, and 100% line coverage of `src/` (373/373 lines) (Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2)
+- 337 tests run, 0 failed, in 0.44 to 0.64 seconds over three runs with the coverage report on, and 100% line coverage of `src/` (373/373 lines) (Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2)
 
 ## Upgrading
 

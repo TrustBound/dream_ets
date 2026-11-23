@@ -141,8 +141,10 @@ pub fn lookup(
 
 With an entry remembered at `now` 1000, it expires at 1300:
 
+### What lookup returns before and after 1300 <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_lookup.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
-lookup(cache, "user:1", 1200)  -> Ok(Some(Profile(name: "Ada", plan: "pro")))
+lookup(cache, "user:1", 1200)  -> Ok(Some(Profile("Ada", "pro")))
 lookup(cache, "user:1", 1300)  -> Ok(None)
 ```
 
@@ -202,9 +204,11 @@ fn load_and_remember(
 
 `get_profile` takes the loader as a function, so your program passes the real database call and your tests pass a stub. Here is what it returns, with `load_ada` a loader that returns Ada's profile and `database_down` a loader that returns `Error("database is down")`:
 
+### What get_profile returns <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_read_through.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
-get_profile(cache, "user:1", 1000, load_ada)       -> Ok(Profile(name: "Ada", plan: "pro"))
-get_profile(cache, "user:1", 1100, database_down)  -> Ok(Profile(name: "Ada", plan: "pro"))
+get_profile(cache, "user:1", 1000, load_ada)       -> Ok(Profile("Ada", "pro"))
+get_profile(cache, "user:1", 1100, database_down)  -> Ok(Profile("Ada", "pro"))
 get_profile(empty, "user:1", 1000, database_down)  -> Error(LoadFailed("database is down"))
 ```
 
@@ -262,11 +266,13 @@ pub fn clear(cache: Table(String, Entry)) -> Result(Nil, EtsError) {
 
 With two profiles cached, for `user:1` and `user:2`:
 
+### What the maintenance functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_maintenance.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
-cached_user_ids(cache)  -> Ok(["user:1", "user:2"])
-entry_count(cache)      -> Ok(2)
-forget(cache, "user:1") then entry_count(cache) -> Ok(1)
-clear(cache) then entry_count(cache)            -> Ok(0)
+cached_user_ids(cache)                           -> Ok(["user:1", "user:2"])
+entry_count(cache)                               -> Ok(2)
+forget(cache, "user:1") then entry_count(cache)  -> Ok(1)
+clear(cache) then entry_count(cache)             -> Ok(0)
 ```
 
 `cached_profiles(cache)` returns both profiles, in the order of the table. A `set` table has no fixed order, so sort the list if you show it.
@@ -406,6 +412,8 @@ The failure you will meet most in a cache is an entry that does not decode. A `D
 - Two `Table` values with different types for one ETS table.
 
 When an older version stored a plain `String` where the cache now expects an `Entry` tuple, `operations.get(cache, "user:1")` returns:
+
+### The error for an entry in an old format <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_decode_error.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 Error(DecodeError(DecodeError("Indexable", "String", [])))

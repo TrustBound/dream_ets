@@ -84,7 +84,9 @@ This module follows [Dream's design principles](https://github.com/TrustBound/dr
 
 ## All Examples Are Tested
 
-Every code example in this README and in the guides comes from `test/snippets/` and is verified by our test suite. You can run them yourself:
+Every code example in this README and in the guides comes from `test/snippets/` and is verified by our test suite. You can run them yourself. CI runs the same command:
+
+### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#run-the-tests-"><img align="right" alt="Guide" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
 
 ```bash
 gleam test

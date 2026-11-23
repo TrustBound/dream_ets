@@ -1,6 +1,7 @@
 //// Tests for the snippets of the caching guide
 //// (docs/guides/caching.md). Each test runs a snippet and asserts the
-//// exact value that the guide shows.
+//// exact value that the guide shows. The output that the guide shows is
+//// compared with the files in test/outputs.
 
 import dream_ets/encoders
 import dream_ets/operations
@@ -8,14 +9,14 @@ import dream_ets/table
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
-import gleam/dynamic/decode
+import fixtures/output_file
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/string
 import snippets/guide_caching_entry.{Profile, create_profile_cache}
 import snippets/guide_caching_lookup.{lookup, remember}
 import snippets/guide_caching_maintenance
-import snippets/guide_caching_read_through.{LoadFailed, get_profile}
+import snippets/guide_caching_read_through.{get_profile}
 import snippets/guide_caching_settings
 
 const ada = Profile(name: "Ada", plan: "pro")
@@ -32,33 +33,23 @@ fn database_down(
 
 pub fn tests() -> TestSuite {
   describe("caching guide", [
-    it("step 2: lookup returns a fresh profile", fn() {
+    it("step 2: lookup gives the output that the guide shows", fn() {
       // Arrange
-      let assert Ok(cache) = create_profile_cache("guide_cache_fresh")
+      let assert Ok(cache) = create_profile_cache("guide_cache_lookup")
       let assert Ok(Nil) = remember(cache, "user:1", ada, 1000)
 
       // Act
-      let found = lookup(cache, "user:1", 1200)
+      let fresh = lookup(cache, "user:1", 1200)
+      let stale = lookup(cache, "user:1", 1300)
 
       // Assert
-      found
+      output_file.calls([
+        #("lookup(cache, \"user:1\", 1200)", string.inspect(fresh)),
+        #("lookup(cache, \"user:1\", 1300)", string.inspect(stale)),
+      ])
       |> should
-      |> be_equal(Ok(Some(ada)))
-      |> or_fail_with("Expected the profile before 1300")
-    }),
-    it("step 2: lookup misses a stale profile", fn() {
-      // Arrange
-      let assert Ok(cache) = create_profile_cache("guide_cache_stale")
-      let assert Ok(Nil) = remember(cache, "user:1", ada, 1000)
-
-      // Act
-      let found = lookup(cache, "user:1", 1300)
-
-      // Assert
-      found
-      |> should
-      |> be_equal(Ok(None))
-      |> or_fail_with("Expected a miss at 1300")
+      |> be_equal(output_file.read("guide_caching_lookup"))
+      |> or_fail_with("Expected the output of guide_caching_lookup.txt")
     }),
     it("step 2: lookup removes a stale profile", fn() {
       // Arrange
@@ -117,66 +108,69 @@ pub fn tests() -> TestSuite {
       let found = operations.get(cache, "user:1")
 
       // Assert
-      found
+      output_file.value(found)
       |> should
-      |> be_equal(
-        Error(table.DecodeError(decode.DecodeError("Indexable", "String", []))),
-      )
-      |> or_fail_with("Expected a DecodeError")
+      |> be_equal(output_file.read("guide_caching_decode_error"))
+      |> or_fail_with("Expected the output of guide_caching_decode_error.txt")
     }),
-    it("step 3: get_profile loads a profile on a miss", fn() {
+    it("step 3: get_profile gives the output that the guide shows", fn() {
       // Arrange
-      let assert Ok(cache) = create_profile_cache("guide_cache_load")
+      let assert Ok(cache) = create_profile_cache("guide_cache_read_through")
+      let assert Ok(empty) = create_profile_cache("guide_cache_read_empty")
 
       // Act
-      let profile = get_profile(cache, "user:1", 1000, load_ada)
+      let loaded = get_profile(cache, "user:1", 1000, load_ada)
+      let cached = get_profile(cache, "user:1", 1100, database_down)
+      let failed = get_profile(empty, "user:1", 1000, database_down)
 
       // Assert
-      profile
+      output_file.calls([
+        #(
+          "get_profile(cache, \"user:1\", 1000, load_ada)",
+          string.inspect(loaded),
+        ),
+        #(
+          "get_profile(cache, \"user:1\", 1100, database_down)",
+          string.inspect(cached),
+        ),
+        #(
+          "get_profile(empty, \"user:1\", 1000, database_down)",
+          string.inspect(failed),
+        ),
+      ])
       |> should
-      |> be_equal(Ok(ada))
-      |> or_fail_with("Expected the loaded profile")
+      |> be_equal(output_file.read("guide_caching_read_through"))
+      |> or_fail_with("Expected the output of guide_caching_read_through.txt")
     }),
-    it("step 3: get_profile serves a hit without the slow source", fn() {
-      // Arrange
-      let assert Ok(cache) = create_profile_cache("guide_cache_hit")
-      let assert Ok(_) = get_profile(cache, "user:1", 1000, load_ada)
+    it(
+      "step 4: the maintenance functions give the output that the guide shows",
+      fn() {
+        // Arrange
+        let cache = two_profiles("guide_cache_maintenance")
 
-      // Act
-      let profile = get_profile(cache, "user:1", 1100, database_down)
+        // Act
+        let user_ids = guide_caching_maintenance.cached_user_ids(cache)
+        let two_entries = guide_caching_maintenance.entry_count(cache)
+        let assert Ok(Nil) = guide_caching_maintenance.forget(cache, "user:1")
+        let one_entry = guide_caching_maintenance.entry_count(cache)
+        let assert Ok(Nil) = guide_caching_maintenance.clear(cache)
+        let no_entries = guide_caching_maintenance.entry_count(cache)
 
-      // Assert
-      profile
-      |> should
-      |> be_equal(Ok(ada))
-      |> or_fail_with("Expected the cached profile")
-    }),
-    it("step 3: get_profile reports a failed load", fn() {
-      // Arrange
-      let assert Ok(cache) = create_profile_cache("guide_cache_load_failed")
-
-      // Act
-      let profile = get_profile(cache, "user:1", 1000, database_down)
-
-      // Assert
-      profile
-      |> should
-      |> be_equal(Error(LoadFailed("database is down")))
-      |> or_fail_with("Expected LoadFailed")
-    }),
-    it("step 4: cached_user_ids lists the keys in order", fn() {
-      // Arrange
-      let cache = two_profiles("guide_cache_ids")
-
-      // Act
-      let user_ids = guide_caching_maintenance.cached_user_ids(cache)
-
-      // Assert
-      user_ids
-      |> should
-      |> be_equal(Ok(["user:1", "user:2"]))
-      |> or_fail_with("Expected both user ids")
-    }),
+        // Assert
+        output_file.calls([
+          #("cached_user_ids(cache)", string.inspect(user_ids)),
+          #("entry_count(cache)", string.inspect(two_entries)),
+          #(
+            "forget(cache, \"user:1\") then entry_count(cache)",
+            string.inspect(one_entry),
+          ),
+          #("clear(cache) then entry_count(cache)", string.inspect(no_entries)),
+        ])
+        |> should
+        |> be_equal(output_file.read("guide_caching_maintenance"))
+        |> or_fail_with("Expected the output of guide_caching_maintenance.txt")
+      },
+    ),
     it("step 4: cached_profiles lists the profiles", fn() {
       // Arrange
       let cache = two_profiles("guide_cache_profiles")
@@ -191,47 +185,6 @@ pub fn tests() -> TestSuite {
       |> should
       |> be_equal([ada, Profile(name: "Grace", plan: "free")])
       |> or_fail_with("Expected both profiles")
-    }),
-    it("step 4: entry_count counts the entries", fn() {
-      // Arrange
-      let cache = two_profiles("guide_cache_count")
-
-      // Act
-      let count = guide_caching_maintenance.entry_count(cache)
-
-      // Assert
-      count
-      |> should
-      |> be_equal(Ok(2))
-      |> or_fail_with("Expected two entries")
-    }),
-    it("step 4: forget removes one entry", fn() {
-      // Arrange
-      let cache = two_profiles("guide_cache_forget")
-      let assert Ok(Nil) = guide_caching_maintenance.forget(cache, "user:1")
-
-      // Act
-      let count = guide_caching_maintenance.entry_count(cache)
-
-      // Assert
-      count
-      |> should
-      |> be_equal(Ok(1))
-      |> or_fail_with("Expected one entry")
-    }),
-    it("step 4: clear removes every entry", fn() {
-      // Arrange
-      let cache = two_profiles("guide_cache_clear")
-      let assert Ok(Nil) = guide_caching_maintenance.clear(cache)
-
-      // Act
-      let count = guide_caching_maintenance.entry_count(cache)
-
-      // Assert
-      count
-      |> should
-      |> be_equal(Ok(0))
-      |> or_fail_with("Expected an empty cache")
     }),
     it("step 5: the busy cache stores and reads profiles", fn() {
       // Arrange

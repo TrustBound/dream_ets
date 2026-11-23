@@ -282,10 +282,13 @@ The [Settings and errors reference](https://github.com/TrustBound/dream_ets/blob
 
 Write your functions so that they take a table as a parameter, as `greet` does. Then each test can make its own tables, put the data it needs in them, and call your function. Tests often run at the same time, and table names are global to the Erlang node, so give each test's tables their own names.
 
-This test module uses [dream_test](https://hexdocs.pm/dream_test). Add it as a dev dependency first. It is not on Hex yet, so add it from GitHub, with the same commit that this package tests with:
+This test module uses [dream_test](https://hexdocs.pm/dream_test). Add it as a dev dependency first. It is not on Hex yet, so add it from GitHub, with the same commit that this package tests with. These are the lines of this package's own `gleam.toml`:
+
+### The dream_test dev dependency <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/gleam.toml#L25-L27"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```toml
 [dev-dependencies]
+# Switched to a Hex version range once it is published.
 dream_test = { git = "https://github.com/TrustBound/dream_test.git", ref = "1639959578a14ae3577f8e3ae5cac058f933aa53" }
 ```
 
@@ -345,6 +348,14 @@ pub fn tests() -> TestSuite {
 ```
 
 Each test builds a `Tables` record from tables with names of its own, so the two tests cannot see each other's data. When a test ends, its process stops, and ETS deletes the tables that it owns.
+
+Run the tests with `gleam test`. CI runs the tests of this package with the same command:
+
+### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
+```bash
+gleam test
+```
 
 ## Common pitfalls
 

@@ -1,0 +1,3 @@
+spend(spent, "user:1", 30)   -> Ok(70)
+spend(spent, "user:1", 80)   -> Error(NotEnoughCredits(70))
+refund_one(spent, "user:1")  -> Ok(29)

@@ -93,6 +93,8 @@ A few things to know about `increment`:
 
 The module in Step 1 also has two readers. `views_of` reads one count, and turns a missing key into 0. `report` reads every count and sorts them by path:
 
+### What the readers return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_counting_readers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
 views_of(views, "/pricing")  -> Ok(0)
 report(views)                -> Ok([#("/", 2), #("/about", 1)])
@@ -292,9 +294,11 @@ pub fn refund_one(
 
 For a new user:
 
+### What spend and refund_one return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_counting_quota.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+
 ```text
 spend(spent, "user:1", 30)   -> Ok(70)
-spend(spent, "user:1", 80)   -> Error(NotEnoughCredits(left: 70))
+spend(spent, "user:1", 80)   -> Error(NotEnoughCredits(70))
 refund_one(spent, "user:1")  -> Ok(29)
 ```
 
