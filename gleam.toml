@@ -8,6 +8,18 @@ links = [
     { title = "GitHub", href = "https://github.com/TrustBound/dream_ets" },
 ]
 
+[documentation]
+pages = [
+    { title = "Getting started", path = "guides/getting-started.html", source = "./docs/guides/getting-started.md" },
+    { title = "Table configuration", path = "guides/table-configuration.html", source = "./docs/guides/table-configuration.md" },
+    { title = "Reading and writing", path = "guides/reading-and-writing.html", source = "./docs/guides/reading-and-writing.md" },
+    { title = "Custom types", path = "guides/custom-types.html", source = "./docs/guides/custom-types.md" },
+    { title = "Atomic operations", path = "guides/atomic-operations.html", source = "./docs/guides/atomic-operations.md" },
+    { title = "Counters", path = "guides/counters.html", source = "./docs/guides/counters.md" },
+    { title = "Persistence", path = "guides/persistence.html", source = "./docs/guides/persistence.md" },
+    { title = "Error handling", path = "guides/error-handling.html", source = "./docs/guides/error-handling.md" },
+]
+
 [dependencies]
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
 gleam_stdlib = ">= 1.0.0 and < 2.0.0"
@@ -18,7 +30,7 @@ gleam_json = ">= 3.0.1 and < 4.0.0"
 # Switched to a Hex version range once it is published.
 dream_test = { git = "https://github.com/TrustBound/dream_test.git", ref = "1639959578a14ae3577f8e3ae5cac058f933aa53" }
 # Switched to a Hex version range once it is published.
-dream_snippets = { git = "https://github.com/TrustBound/dream_snippets.git", ref = "7a862a3e5b74f0a7f2e9c15170d4d6c772605cfb" }
+dream_snippets = { git = "https://github.com/TrustBound/dream_snippets.git", ref = "f116b072699ec33315980418036d962e22fab872" }
 
 [tools.dream_snippets]
 # Changelog sections and release notes before this version are history. They are not checked.

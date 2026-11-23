@@ -32,6 +32,10 @@ Rejected table options and refused operations now return `OperationFailed` and n
 
 `dream_ets` moved out of the Dream repository. It has its own version, its own changelog and its own release workflow. The package name on Hex and the module names are the same as before.
 
+### Guides
+
+The package has guides in [`docs/guides/`](https://github.com/TrustBound/dream_ets/tree/main/docs/guides). The README is short and links to them, and HexDocs shows the guides.
+
 ## Bug Fixes
 
 ### An Operation on a Deleted Table Returns `TableNotFound`
@@ -138,6 +142,14 @@ Read a key that can have several values with `get_all()` and `take_all()`.
 
 - [dream_ets](https://hexdocs.pm/dream_ets) - v3.0.0
 - [README](https://github.com/TrustBound/dream_ets/blob/main/README.md)
+- [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md)
+- [Table configuration](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/table-configuration.md)
+- [Reading and writing](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/reading-and-writing.md)
+- [Custom types](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/custom-types.md)
+- [Atomic operations](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/atomic-operations.md)
+- [Counters](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counters.md)
+- [Persistence](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/persistence.md)
+- [Error handling](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/error-handling.md)
 - [Changelog](https://github.com/TrustBound/dream_ets/blob/main/CHANGELOG.md)
 
 ## Community

@@ -95,6 +95,8 @@ gets ascending order. On a bag table, read a key with `get_all()` and
 ### Changed
 
 - Moved to its own repository.
+- The package has guides in `docs/guides/`. The README is short and links
+  to them, and HexDocs shows the guides.
 - Rejected table options and refused operations now return
   `OperationFailed` instead of crashing the caller. When ETS rejects the
   name of `config.create` (a name of more than 255 characters), the result

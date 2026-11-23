@@ -8,31 +8,19 @@
 <br />
 
 <div align="center">
-  <a href="https://hex.pm/packages/dream_ets">
-    <img src="https://img.shields.io/hexpm/v/dream_ets" alt="Hex Package">
-  </a>
-  <a href="https://github.com/TrustBound/dream_ets/releases">
-    <img src="https://img.shields.io/github/v/release/TrustBound/dream_ets?label=Release" alt="Latest Release">
-  </a>
-  <a href="https://hexdocs.pm/dream_ets">
-    <img src="https://img.shields.io/badge/hex-docs-lightgreen.svg" alt="HexDocs">
-  </a>
-  <a href="https://github.com/TrustBound/dream_ets/actions/workflows/ci.yml?query=branch%3Amain">
-    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TrustBound/dream_ets/badges/coverage.json" alt="Coverage">
-  </a>
-  <a href="https://github.com/TrustBound/dream_ets/blob/main/LICENSE.md">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
-  </a>
-  <a href="https://gleam.run">
-    <img src="https://img.shields.io/badge/gleam-%E2%9C%A8-ffaff3" alt="Gleam">
-  </a>
+  <a href="https://hex.pm/packages/dream_ets"><img src="https://img.shields.io/hexpm/v/dream_ets" alt="Hex Package"></a>
+  <a href="https://github.com/TrustBound/dream_ets/releases"><img src="https://img.shields.io/github/v/release/TrustBound/dream_ets?label=Release" alt="Latest Release"></a>
+  <a href="https://hexdocs.pm/dream_ets"><img src="https://img.shields.io/badge/hex-docs-lightgreen.svg" alt="HexDocs"></a>
+  <a href="https://github.com/TrustBound/dream_ets/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TrustBound/dream_ets/badges/coverage.json" alt="Coverage"></a>
+  <a href="https://github.com/TrustBound/dream_ets/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="https://gleam.run"><img src="https://img.shields.io/badge/gleam-%E2%9C%A8-ffaff3" alt="Gleam"></a>
 </div>
 
 <br />
 
 # dream_ets
 
-A standalone module providing a type-safe interface to Erlang's ETS in-memory storage. Features a builder pattern for table configuration, type-safe operations, and comprehensive error handling. Built with the same quality standards as [Dream](https://github.com/TrustBound/dream), but completely independent—use it in any Gleam project.
+A standalone module that gives a type-safe interface to Erlang's ETS in-memory storage. It has a builder pattern for table configuration, type-safe operations, and `Result`-based error handling. It is built with the same quality standards as [Dream](https://github.com/TrustBound/dream), but it is completely independent. Use it in any Gleam project.
 
 ## Features
 
@@ -54,7 +42,7 @@ gleam add dream_ets
 
 ## Quick Start
 
-### Creating a Table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/creating_tables.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Creating a Table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/creating_tables.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#creating-a-table-"><img align="right" alt="Guide" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -83,410 +71,20 @@ pub fn create_string_table() -> Result(String, table.EtsError) {
 }
 ```
 
-### Basic Operations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/basic_operations.gleam#L5-L24"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
-
-pub fn store_and_retrieve() -> Result(String, table.EtsError) {
-  use cache <- result.try(helpers.new_string_table("cache"))
-
-  // Store a value
-  use _ <- result.try(operations.set(cache, "greeting", "Hello, World!"))
-
-  // Retrieve it
-  use value <- result.try(operations.get(cache, "greeting"))
-
-  case value {
-    option.Some(greeting) -> Ok(greeting)
-    option.None -> Error(table.OperationFailed("Not found"))
-  }
-}
-```
-
-### Counter Tables <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/counter_tables.gleam#L5-L18"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/table
-import gleam/result
-
-pub fn increment_page_views() -> Result(Int, table.EtsError) {
-  use counter <- result.try(helpers.new_counter("page_views"))
-
-  // Track multiple page views
-  use _ <- result.try(helpers.increment(counter, "homepage"))
-  use _ <- result.try(helpers.increment(counter, "homepage"))
-  use count <- result.try(helpers.increment(counter, "homepage"))
-
-  Ok(count)
-}
-```
-
-## Core Features
-
-### Custom Types with JSON
-
-Store your own types using JSON encoding:
-
-#### Store a user as JSON <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/custom_types.gleam#L5-L63"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/config
-import dream_ets/operations
-import dream_ets/table
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/json
-import gleam/option
-import gleam/result
-import gleam/string
-
-pub type User {
-  User(name: String, email: String)
-}
-
-fn encode_user(user: User) -> dynamic.Dynamic {
-  json.object([
-    #("name", json.string(user.name)),
-    #("email", json.string(user.email)),
-  ])
-  |> json.to_string
-  |> dynamic.string
-}
-
-fn decode_user() -> decode.Decoder(User) {
-  decode.string
-  |> decode.then(fn(json_text) {
-    case json.parse(json_text, user_from_json()) {
-      Ok(user) -> decode.success(user)
-      Error(error) ->
-        decode.failure(User("", ""), "User JSON: " <> string.inspect(error))
-    }
-  })
-}
-
-fn user_from_json() -> decode.Decoder(User) {
-  use name <- decode.field("name", decode.string)
-  use email <- decode.field("email", decode.string)
-  decode.success(User(name: name, email: email))
-}
-
-pub fn store_custom_type() -> Result(String, table.EtsError) {
-  use users <- result.try(
-    config.new("users")
-    |> config.key_string()
-    |> config.value(encode_user, decode_user())
-    |> config.create(),
-  )
-
-  let user = User(name: "Alice", email: "alice@example.com")
-  use _ <- result.try(operations.set(users, "alice", user))
-
-  use retrieved <- result.try(operations.get(users, "alice"))
-
-  case retrieved {
-    option.Some(stored_user) ->
-      Ok(stored_user.name <> " <" <> stored_user.email <> ">")
-    option.None -> Error(table.OperationFailed("User not found"))
-  }
-}
-```
-
-### Preventing Duplicates
-
-Use `insert_new()` for atomic "check and insert" operations:
-
-#### Register a username once <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/insert_new.gleam#L5-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/result
-
-pub fn register_user() -> Result(Bool, table.EtsError) {
-  use registrations <- result.try(helpers.new_string_table("registrations"))
-
-  // Try to register username
-  use registered <- result.try(operations.insert_new(
-    registrations,
-    "alice",
-    "alice@example.com",
-  ))
-
-  case registered {
-    True -> {
-      // Username available - registration succeeded
-      Ok(True)
-    }
-    False -> {
-      // Username already taken
-      Ok(False)
-    }
-  }
-}
-```
-
-### Atomic Operations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/advanced_operations.gleam#L5-L24"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
-
-pub fn atomic_take() -> Result(String, table.EtsError) {
-  use queue <- result.try(helpers.new_string_table("jobs"))
-
-  // Add a job
-  use _ <- result.try(operations.set(queue, "job:123", "send_email"))
-
-  // Take and remove atomically
-  use job <- result.try(operations.take(queue, "job:123"))
-
-  case job {
-    option.Some(task) -> Ok(task)
-    option.None -> Error(table.OperationFailed("Job not found"))
-  }
-}
-```
-
-### Table Configuration
-
-Optimize tables for your workload:
-
-#### Enable read concurrency <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/table_configuration.gleam#L5-L29"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/config
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
-
-pub fn configure_table() -> Result(String, table.EtsError) {
-  // Create table with read concurrency enabled
-  // Use this when multiple processes will read simultaneously
-  use cache <- result.try(
-    config.new("cache")
-    |> config.read_concurrency(True)
-    |> config.key_string()
-    |> config.value_string()
-    |> config.create(),
-  )
-
-  use _ <- result.try(operations.set(cache, "key", "value"))
-  use value <- result.try(operations.get(cache, "key"))
-
-  case value {
-    option.Some(stored_value) -> Ok(stored_value)
-    option.None -> Error(table.OperationFailed("Not found"))
-  }
-}
-```
-
-**Configuration Options:**
-
-- `read_concurrency(Bool)` - Optimize for concurrent reads
-- `write_concurrency(Bool)` - Optimize for concurrent writes
-- `compressed(Bool)` - Compress data to save memory
-- `table_type(Set | OrderedSet | Bag | DuplicateBag)` - Key handling
-- `access(Public | Protected | Private)` - Process access control
-
-### Type Safety <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/type_safe_operations.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
-
-pub fn type_safe_storage() -> Result(String, table.EtsError) {
-  // String table enforces types at compile time
-  use cache <- result.try(helpers.new_string_table("cache"))
-
-  // ✅ This works
-  use _ <- result.try(operations.set(cache, "key", "value"))
-
-  // ❌ This would be a compile error:
-  // operations.set(cache, 123, "value")
-  // Error: Expected String, found Int
-
-  use value <- result.try(operations.get(cache, "key"))
-
-  case value {
-    option.Some(stored_value) -> Ok(stored_value)
-    option.None -> Error(table.OperationFailed("Not found"))
-  }
-}
-```
-
-### Persistence <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/table_persistence.gleam#L5-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
-
-pub fn save_to_disk() -> Result(String, table.EtsError) {
-  use data <- result.try(helpers.new_string_table("data"))
-
-  use _ <- result.try(operations.set(data, "key", "important data"))
-
-  // Save to disk
-  use _ <- result.try(operations.save_to_file(data, "/tmp/dream_ets_backup.ets"))
-
-  // Verify it's still there
-  use value <- result.try(operations.get(data, "key"))
-
-  case value {
-    option.Some(data) -> Ok(data)
-    option.None -> Error(table.OperationFailed("Data lost"))
-  }
-}
-```
-
-## Complete API Reference
-
-### Table Creation
-
-- `config.new(name)` - Create table configuration
-- `config.key_string(config)` - Set string keys
-- `config.value_string(config)` - Set string values
-- `config.key(config, encoder, decoder)` - Set custom key encoding
-- `config.value(config, encoder, decoder)` - Set custom value encoding
-- `config.counter(config)` - Configure counter table (String keys, Int values)
-- `config.create(config)` - Create table from configuration
-- `helpers.new_counter(name)` - Convenience: create counter table
-- `helpers.new_string_table(name)` - Convenience: create string table
-
-### Basic Operations
-
-- `operations.set(table, key, value)` - Insert or update value
-- `operations.get(table, key)` - Retrieve value (returns `Option`)
-- `operations.get_all(table, key)` - Retrieve every value of a key, for bag tables → `Result(List(v), EtsError)`
-- `operations.delete(table, key)` - Remove key-value pair
-- `operations.member(table, key)` - Check if key exists (fast) → `Result(Bool, EtsError)`
-- `operations.delete_table(table)` - Delete entire table
-- `operations.delete_all_objects(table)` - Clear all entries
-
-### Atomic Operations
-
-- `operations.insert_new(table, key, value)` - Insert only if key doesn't exist (atomic)
-- `operations.take(table, key)` - Get and remove atomically (for queues)
-- `operations.take_all(table, key)` - Get and remove every value of a key atomically, for bag tables
-
-### Bulk Operations
-
-**Note:** These now return `Result` to handle decode errors properly:
-
-- `operations.keys(table)` - Get all keys, in ascending order for an ordered_set table → `Result(List(k), EtsError)`
-- `operations.values(table)` - Get all values → `Result(List(v), EtsError)`
-- `operations.to_list(table)` - Get all pairs → `Result(List(#(k, v)), EtsError)`
-- `operations.size(table)` - Count entries → `Result(Int, EtsError)`
-
-### Counter Operations
-
-- `helpers.increment(counter, key)` - Increment by 1
-- `helpers.increment_by(counter, key, amount)` - Increment by amount
-- `helpers.decrement(counter, key)` - Decrement by 1
-- `helpers.decrement_by(counter, key, amount)` - Decrement by amount
-
-### Advanced (Low-level)
-
-- `operations.update_element(table, key, pos, value)` - Update tuple element → `Result(Bool, EtsError)`, `Ok(False)` when the key is not in the table
-- `operations.match(table, pattern)` - Pattern matching → `Result(List(Dynamic), EtsError)`
-- `operations.match_object(table, pattern)` - Object matching → `Result(List(Dynamic), EtsError)`
-- `operations.select(table, match_spec)` - SQL-like queries → `Result(List(Dynamic), EtsError)`
-
-### Persistence
-
-- `operations.save_to_file(table, filename)` - Save table to disk
-- `operations.load_from_file(filename)` - Load table from disk
-
-## Error Handling
-
-All operations that take a table return `Result` types. Common errors:
-
-- `TableNotFound` - Table was deleted. Every operation on a deleted table returns this error and does not crash the calling process.
-- `TableAlreadyExists` - Tried to create duplicate table
-- `InvalidKey` / `InvalidValue` - Encoding/decoding failed
-- `DecodeError(details)` - Failed to decode data (corruption or encoder mismatch)
-- `OperationFailed(message)` - General operation failure
-
-#### Handle each lookup result <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/error_handling.gleam#L16-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-  case operations.get(users, key) {
-    Ok(option.Some(user)) -> "Found " <> user
-    Ok(option.None) -> "No user for " <> key
-    Error(table.DecodeError(error)) ->
-      "Stored data is corrupt: expected "
-      <> error.expected
-      <> ", found "
-      <> error.found
-    Error(table.TableNotFound) -> "The table was deleted"
-    Error(other) -> "Lookup failed: " <> string.inspect(other)
-  }
-```
-
-## Use Cases
-
-### Session Cache <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/session_cache.gleam#L12-L19"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-  use sessions <- result.try(
-    config.new("sessions")
-    |> config.key_string()
-    |> config.value_string()
-    |> config.create(),
-  )
-
-  use _ <- result.try(operations.set(sessions, "session:abc", "user:alice"))
-```
-
-### Page View Analytics <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/page_view_analytics.gleam#L10-L11"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-  use counter <- result.try(helpers.new_counter("analytics"))
-  use views <- result.try(helpers.increment(counter, "homepage"))
-```
-
-### Distributed Locks <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/distributed_locks.gleam#L16-L20"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-  case operations.insert_new(locks, resource_id, owner_id) {
-    Ok(True) -> Ok("Lock acquired")
-    Ok(False) -> Error("Resource already locked")
-    Error(error) -> Error("Lock system error: " <> string.inspect(error))
-  }
-```
-
-### Work Queue <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/work_queue.gleam#L13-L17"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-
-```gleam
-  case operations.take(queue, "next_job") {
-    Ok(option.Some(job)) -> "Claimed " <> job
-    Ok(option.None) -> "No jobs waiting"
-    Error(error) -> "Queue error: " <> string.inspect(error)
-  }
-```
-
-## Performance Notes
-
-- **Basic ops** (`set`, `get`, `delete`, `member`) - O(1) constant time
-- **Bulk ops** (`keys`, `values`, `to_list`, `size`) - O(n) iterates entire table
-- **Concurrency** - Enable `read_concurrency` for read-heavy workloads
-- **Compression** - Enable for large values to trade CPU for memory
+## Guides
+
+- [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md): install the package and create a first table
+- [Table configuration](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/table-configuration.md): build a table with the config builder and set its options
+- [Reading and writing](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/reading-and-writing.md): store, read, delete and list values, and run low-level queries
+- [Custom types](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/custom-types.md): store your own types with custom encoders, such as JSON
+- [Atomic operations](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/atomic-operations.md): use `insert_new` and `take` for race-free locks and queues
+- [Counters](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counters.md): count events with counter tables
+- [Persistence](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/persistence.md): save a table to disk and load it again
+- [Error handling](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/error-handling.md): handle each `EtsError` that an operation returns
+
+## API Reference
+
+The full API reference is on [HexDocs](https://hexdocs.pm/dream_ets). Each guide lists the functions it uses.
 
 ## Design Principles
 
@@ -494,7 +92,7 @@ This module follows [Dream's design principles](https://github.com/TrustBound/dr
 
 ## All Examples Are Tested
 
-Every code example in this README comes from `test/snippets/` and is verified by our test suite. You can run them yourself:
+Every code example in this README and in the guides comes from `test/snippets/` and is verified by our test suite. You can run them yourself:
 
 ```bash
 gleam test
