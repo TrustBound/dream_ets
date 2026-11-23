@@ -14,6 +14,7 @@ import dream_ets/table.{DecodeError, OperationFailed, TableNotFound}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
+import fixtures/bag_table
 import fixtures/deleted_table.{deleted_string_table}
 import fixtures/guarded_table.{private_string_table, protected_string_table}
 import fixtures/key_only_file
@@ -21,7 +22,6 @@ import fixtures/other_process
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/erlang/atom
-import gleam/function
 import gleam/option
 import gleam/result
 import gleam/string
@@ -183,7 +183,7 @@ pub fn tests() -> TestSuite {
         |> be_equal(Ok(option.Some(42)))
         |> or_fail_with("Should return 42")
       }),
-      it("returns DecodeError for a bag key with two values", fn() {
+      it("returns OperationFailed for a bag key with two values", fn() {
         // Arrange
         let config_value =
           config.new("types_bag_get")
@@ -202,10 +202,8 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(
-          Error(DecodeError(decode.DecodeError("String", "Array", []))),
-        )
-        |> or_fail_with("Should fail to decode the list of two objects")
+        |> be_equal(Error(OperationFailed("the key has 2 values, use get_all")))
+        |> or_fail_with("Should name get_all for a key with two values")
       }),
       it("returns DecodeError for a loaded object that has no value", fn() {
         // Arrange
@@ -231,6 +229,28 @@ pub fn tests() -> TestSuite {
           Error(DecodeError(decode.DecodeError("Field", "Nothing", ["1"]))),
         )
         |> or_fail_with("Should fail to read the value of the object")
+      }),
+      it("returns DecodeError for a value that does not decode", fn() {
+        // Arrange: the value decoder reads only values below 10
+        let config_value =
+          config.new("types_value_bad_get")
+          |> config.key_string()
+          |> config.value(encoders.int_encoder, small_int_decoder())
+        let result = {
+          use numbers <- result.try(config.create(config_value))
+          use _ <- result.try(operations.set(numbers, "key", 10))
+
+          // Act
+          operations.get(numbers, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Error(DecodeError(decode.DecodeError("SmallInt", "Int", []))),
+        )
+        |> or_fail_with("Should fail to decode the value")
       }),
     ]),
     group("delete", [
@@ -447,7 +467,7 @@ pub fn tests() -> TestSuite {
         |> be_equal(Error(TableNotFound))
         |> or_fail_with("keys on a deleted table should return TableNotFound")
       }),
-      it("returns every key, last key first", fn() {
+      it("returns the keys of an ordered table in ascending order", fn() {
         // Arrange
         let config_value =
           config.new("ops_keys")
@@ -467,8 +487,8 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok(["c", "b", "a"]))
-        |> or_fail_with("Should return every key")
+        |> be_equal(Ok(["a", "b", "c"]))
+        |> or_fail_with("Should return the keys in ascending order")
       }),
       it("returns an empty list for an empty table", fn() {
         // Arrange
@@ -504,52 +524,54 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok([2, 1]))
-        |> or_fail_with("Should return both Int keys, last key first")
+        |> be_equal(Ok([1, 2]))
+        |> or_fail_with("Should return both Int keys in ascending order")
       }),
       it("returns DecodeError when the first key does not decode", fn() {
-        // Arrange: with key position 2, ETS uses the String value as the key
+        // Arrange: the key decoder reads only keys below 10
         let config_value =
           config.new("types_keys_first_bad")
-          |> config.key(encoders.int_encoder, encoders.int_decoder())
+          |> config.key(encoders.int_encoder, small_int_decoder())
           |> config.value_string()
-          |> config.keypos(2)
 
         // Act
         let result = {
           use numbers <- result.try(config.create(config_value))
-          use _ <- result.try(operations.set(numbers, 1, "one"))
+          use _ <- result.try(operations.set(numbers, 10, "ten"))
           operations.keys(numbers)
         }
 
         // Assert
         result
         |> should
-        |> be_equal(Error(DecodeError(decode.DecodeError("Int", "String", []))))
-        |> or_fail_with("Should fail to decode the String key")
+        |> be_equal(
+          Error(DecodeError(decode.DecodeError("SmallInt", "Int", []))),
+        )
+        |> or_fail_with("Should fail to decode the first key")
       }),
       it("returns DecodeError when a later key does not decode", fn() {
-        // Arrange: with key position 2, ETS uses the value as the key. In
-        // an ordered_set the Int key 1 comes before the String key "x".
+        // Arrange: the key decoder reads only keys below 10. In an
+        // ordered_set the key 1 comes before the key 10.
         let config_value =
           config.new("types_keys_later_bad")
-          |> config.key(encoders.int_encoder, encoders.int_decoder())
-          |> config.value(function.identity, decode.dynamic)
-          |> config.keypos(2)
+          |> config.key(encoders.int_encoder, small_int_decoder())
+          |> config.value_string()
           |> config.table_type(config.table_type_ordered_set())
 
         // Act
         let result = {
-          use mixed <- result.try(config.create(config_value))
-          use _ <- result.try(operations.set(mixed, 10, dynamic.int(1)))
-          use _ <- result.try(operations.set(mixed, 20, dynamic.string("x")))
-          operations.keys(mixed)
+          use numbers <- result.try(config.create(config_value))
+          use _ <- result.try(operations.set(numbers, 1, "one"))
+          use _ <- result.try(operations.set(numbers, 10, "ten"))
+          operations.keys(numbers)
         }
 
         // Assert
         result
         |> should
-        |> be_equal(Error(DecodeError(decode.DecodeError("Int", "String", []))))
+        |> be_equal(
+          Error(DecodeError(decode.DecodeError("SmallInt", "Int", []))),
+        )
         |> or_fail_with("Should fail to decode the second key")
       }),
     ]),
@@ -569,7 +591,7 @@ pub fn tests() -> TestSuite {
         |> be_equal(Error(TableNotFound))
         |> or_fail_with("values on a deleted table should return TableNotFound")
       }),
-      it("returns every value, last key first", fn() {
+      it("returns the values in the order of the keys", fn() {
         // Arrange
         let config_value =
           config.new("ops_values")
@@ -588,7 +610,7 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok(["2", "1"]))
+        |> be_equal(Ok(["1", "2"]))
         |> or_fail_with("Should return every value")
       }),
       it("returns typed values", fn() {
@@ -610,8 +632,10 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok([2.5, 1.5]))
-        |> or_fail_with("Should return both Float values, last key first")
+        |> be_equal(Ok([1.5, 2.5]))
+        |> or_fail_with(
+          "Should return both Float values in the order of the keys",
+        )
       }),
       it("returns OperationFailed when a listed key is not found", fn() {
         // Arrange: the key decoder changes the key, so a lookup with the
@@ -660,7 +684,7 @@ pub fn tests() -> TestSuite {
           "to_list on a deleted table should return TableNotFound",
         )
       }),
-      it("returns every pair, last key first", fn() {
+      it("returns the pairs in the order of the keys", fn() {
         // Arrange
         let config_value =
           config.new("ops_to_list")
@@ -679,7 +703,7 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok([#("b", "2"), #("a", "1")]))
+        |> be_equal(Ok([#("a", "1"), #("b", "2")]))
         |> or_fail_with("Should return every pair")
       }),
       it("returns typed pairs", fn() {
@@ -701,8 +725,8 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok([#("b", False), #("a", True)]))
-        |> or_fail_with("Should return both pairs, last key first")
+        |> be_equal(Ok([#("a", True), #("b", False)]))
+        |> or_fail_with("Should return both pairs in the order of the keys")
       }),
       it("returns OperationFailed when a listed key is not found", fn() {
         // Arrange: the key decoder changes the key, so a lookup with the
@@ -866,7 +890,7 @@ pub fn tests() -> TestSuite {
         |> be_equal(Ok(option.None))
         |> or_fail_with("Should return None")
       }),
-      it("returns DecodeError for a bag key with two values", fn() {
+      it("returns OperationFailed for a bag key with two values", fn() {
         // Arrange
         let config_value =
           config.new("types_bag_take")
@@ -886,9 +910,9 @@ pub fn tests() -> TestSuite {
         result
         |> should
         |> be_equal(
-          Error(DecodeError(decode.DecodeError("String", "Array", []))),
+          Error(OperationFailed("the key has 2 values, use take_all")),
         )
-        |> or_fail_with("Should fail to decode the list of two objects")
+        |> or_fail_with("Should name take_all for a key with two values")
       }),
       it("returns DecodeError for a loaded object that has no value", fn() {
         // Arrange
@@ -916,6 +940,277 @@ pub fn tests() -> TestSuite {
         |> or_fail_with("Should fail to read the value of the object")
       }),
     ]),
+    group("get_all", [
+      it("returns both values of a bag key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("get_all_bag"))
+
+          // Act
+          operations.get_all(bag, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["first", "second"]))
+        |> or_fail_with("Should return both values of the key")
+      }),
+      it("returns an empty list for a key that is not in the table", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.bag_string_table("get_all_missing"))
+
+          // Act
+          operations.get_all(bag, "missing")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok([]))
+        |> or_fail_with("Should return no values")
+      }),
+      it("returns the one value of a key in a set table", fn() {
+        // Arrange
+        let result = {
+          use strings <- result.try(helpers.new_string_table("get_all_set"))
+          use _ <- result.try(operations.set(strings, "key", "value"))
+
+          // Act
+          operations.get_all(strings, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["value"]))
+        |> or_fail_with("Should return the one value")
+      }),
+      it("returns TableNotFound for a deleted table", fn() {
+        // Arrange
+        let result = {
+          use deleted <- result.try(deleted_string_table("deleted_get_all"))
+
+          // Act
+          operations.get_all(deleted, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Error(TableNotFound))
+        |> or_fail_with(
+          "get_all on a deleted table should return TableNotFound",
+        )
+      }),
+      it("returns DecodeError for a loaded object that has no value", fn() {
+        // Arrange
+        let filename = "build/types_key_only_get_all.ets"
+        key_only_file.write("types_key_only_get_all", "key", filename)
+        let config_value =
+          config.new("types_key_only_get_all")
+          |> config.key_string()
+          |> config.value_string()
+        let result = {
+          use strings <- result.try(config.create(config_value))
+          use _ <- result.try(operations.delete_table(strings))
+          use _ <- result.try(operations.load_from_file(filename))
+
+          // Act
+          operations.get_all(strings, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Error(DecodeError(decode.DecodeError("Field", "Nothing", ["1"]))),
+        )
+        |> or_fail_with("Should fail to read the value of the object")
+      }),
+      it("returns OperationFailed for a private table of another process", fn() {
+        // Arrange
+        let result = {
+          use private <- result.try(
+            private_string_table("refused_get_all")
+            |> result.replace_error("create failed"),
+          )
+
+          // Act
+          other_process.run(fn() { operations.get_all(private, "key") })
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+        )
+        |> or_fail_with("Should return OperationFailed for a refused read")
+      }),
+    ]),
+    group("take_all", [
+      it("returns both values of a bag key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("take_all_bag"))
+
+          // Act
+          operations.take_all(bag, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["first", "second"]))
+        |> or_fail_with("Should return both values of the key")
+      }),
+      it("removes the values of the key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("take_all_removes"))
+
+          // Act
+          use _ <- result.try(operations.take_all(bag, "key"))
+          operations.get_all(bag, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok([]))
+        |> or_fail_with("Should leave no value under the key")
+      }),
+      it("returns an empty list for a key that is not in the table", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.bag_string_table("take_all_missing"))
+
+          // Act
+          operations.take_all(bag, "missing")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok([]))
+        |> or_fail_with("Should return no values")
+      }),
+      it("returns TableNotFound for a deleted table", fn() {
+        // Arrange
+        let result = {
+          use deleted <- result.try(deleted_string_table("deleted_take_all"))
+
+          // Act
+          operations.take_all(deleted, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Error(TableNotFound))
+        |> or_fail_with(
+          "take_all on a deleted table should return TableNotFound",
+        )
+      }),
+      it("returns DecodeError for a loaded object that has no value", fn() {
+        // Arrange
+        let filename = "build/types_key_only_take_all.ets"
+        key_only_file.write("types_key_only_take_all", "key", filename)
+        let config_value =
+          config.new("types_key_only_take_all")
+          |> config.key_string()
+          |> config.value_string()
+        let result = {
+          use strings <- result.try(config.create(config_value))
+          use _ <- result.try(operations.delete_table(strings))
+          use _ <- result.try(operations.load_from_file(filename))
+
+          // Act
+          operations.take_all(strings, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Error(DecodeError(decode.DecodeError("Field", "Nothing", ["1"]))),
+        )
+        |> or_fail_with("Should fail to read the value of the object")
+      }),
+      it(
+        "returns OperationFailed for a protected table of another process",
+        fn() {
+          // Arrange
+          let result = {
+            use protected <- result.try(
+              protected_string_table("refused_take_all")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            other_process.run(fn() { operations.take_all(protected, "key") })
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Ok(Error(OperationFailed("ETS refused the operation: badarg"))),
+          )
+          |> or_fail_with("Should return OperationFailed for a refused write")
+        },
+      ),
+    ]),
+    group("bag tables", [
+      it("take keeps the values of a key with two values", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("bag_take_keeps"))
+
+          // Act
+          let _ = operations.take(bag, "key")
+          operations.get_all(bag, "key")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["first", "second"]))
+        |> or_fail_with("take should leave both values in the table")
+      }),
+      it("values returns every value of a key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("bag_values"))
+
+          // Act
+          operations.values(bag)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["first", "second"]))
+        |> or_fail_with("values should return both values of the key")
+      }),
+      it("to_list returns a pair for every value of a key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("bag_to_list"))
+
+          // Act
+          operations.to_list(bag)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok([#("key", "first"), #("key", "second")]))
+        |> or_fail_with("to_list should return a pair for each value")
+      }),
+    ]),
     group("update_element", [
       it("returns Ok for an existing key", fn() {
         // Arrange
@@ -934,8 +1229,8 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Ok(Nil))
-        |> or_fail_with("Should update the element")
+        |> be_equal(Ok(True))
+        |> or_fail_with("Should say that it changed the element")
       }),
       it("replaces the value of an existing key", fn() {
         // Arrange
@@ -980,7 +1275,7 @@ pub fn tests() -> TestSuite {
           "update_element on a deleted table should return TableNotFound",
         )
       }),
-      it("returns TableNotFound for a missing key", fn() {
+      it("returns False for a missing key", fn() {
         // Arrange
         let result = {
           use strings <- result.try(helpers.new_string_table("errors_update"))
@@ -997,8 +1292,8 @@ pub fn tests() -> TestSuite {
         // Assert
         result
         |> should
-        |> be_equal(Error(TableNotFound))
-        |> or_fail_with("Should return TableNotFound for a missing key")
+        |> be_equal(Ok(False))
+        |> or_fail_with("Should say that the key is not in the table")
       }),
     ]),
     group("delete_all_objects", [
@@ -1754,4 +2049,13 @@ pub fn tests() -> TestSuite {
       ),
     ]),
   ])
+}
+
+// Reads an Int key below 10. A larger key does not decode.
+fn small_int_decoder() -> decode.Decoder(Int) {
+  use number <- decode.then(decode.int)
+  case number < 10 {
+    True -> decode.success(number)
+    False -> decode.failure(0, "SmallInt")
+  }
 }

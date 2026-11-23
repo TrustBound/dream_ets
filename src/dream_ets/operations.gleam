@@ -64,7 +64,6 @@
 ////
 //// - `TableNotFound` - Table was deleted
 //// - `DecodeError` - Failed to decode value
-//// - `EncodeError` - Failed to encode value
 //// - `OperationFailed` - General operation failure
 ////
 //// ## Performance Notes
@@ -83,6 +82,7 @@ import dream_ets/internal
 import dream_ets/table
 import gleam/dynamic
 import gleam/dynamic/decode
+import gleam/int
 import gleam/list
 import gleam/option
 import gleam/result
@@ -183,8 +183,66 @@ pub fn get(
   let table_ref = table.table_ref(table)
 
   case internal.lookup(table_ref, encoded_key) {
-    Ok(dyn_object) -> decode_lookup_result(table, dyn_object)
-    Error(internal.NotFound) -> Ok(option.None)
+    Ok([]) -> Ok(option.None)
+    Ok([dyn_object]) -> decode_lookup_result(table, dyn_object)
+    Ok(dyn_objects) ->
+      Error(several_values_error(list.length(dyn_objects), "get_all"))
+    Error(err) -> Error(ffi_error_to_ets_error(err))
+  }
+}
+
+/// Get every value stored under a key
+///
+/// A set or ordered_set table has at most one value for a key. A bag or
+/// duplicate_bag table can have more. This function returns all of them, for
+/// every table type.
+///
+/// ## Parameters
+///
+/// - `table`: The table to query
+/// - `key`: The key to look up
+///
+/// ## Returns
+///
+/// `Ok(values)`: the values of the key. The list is empty when the key is
+/// not in the table.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `DecodeError(error)`: A stored value could not be decoded
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
+///
+/// ## Example
+///
+/// ### Read every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L274-L281"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn tags_of_post(
+///   tags: table.Table(String, String),
+/// ) -> Result(List(String), table.EtsError) {
+///   // `tags` is a bag table, so one key can have several values
+///   use _ <- result.try(operations.set(tags, "post-1", "gleam"))
+///   use _ <- result.try(operations.set(tags, "post-1", "erlang"))
+///   operations.get_all(tags, "post-1")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `get()` - Read the one value of a key
+/// - `take_all()` - Read and remove every value of a key
+pub fn get_all(
+  table: table.Table(k, v),
+  key: k,
+) -> Result(List(v), table.EtsError) {
+  let encoded_key = table.encode_key(table, key)
+  let table_ref = table.table_ref(table)
+
+  case internal.lookup(table_ref, encoded_key) {
+    Ok(dyn_objects) -> decode_objects(table, dyn_objects)
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
@@ -747,9 +805,64 @@ pub fn take(
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
+  case internal.take_one(table_ref, encoded_key) {
+    Ok([dyn_object]) -> decode_take_result(table, dyn_object)
+    Ok(_no_object) -> Ok(option.None)
+    Error(internal.SeveralObjects(count)) ->
+      Error(several_values_error(count, "take_all"))
+    Error(err) -> Error(ffi_error_to_ets_error(err))
+  }
+}
+
+/// Read and remove every value stored under a key
+///
+/// The read and the removal are one ETS operation, for every table type.
+///
+/// ## Parameters
+///
+/// - `table`: The table to take from
+/// - `key`: The key to take
+///
+/// ## Returns
+///
+/// `Ok(values)`: the values that were removed. The list is empty when the
+/// key is not in the table.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `DecodeError(error)`: A stored value could not be decoded. The values
+///   are removed.
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table)
+///
+/// ## Example
+///
+/// ### Remove every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L283-L288"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn remove_tags(
+///   tags: table.Table(String, String),
+/// ) -> Result(List(String), table.EtsError) {
+///   // Read and remove every value of the key in one operation
+///   operations.take_all(tags, "post-1")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `take()` - Read and remove the one value of a key
+/// - `get_all()` - Read every value of a key
+pub fn take_all(
+  table: table.Table(k, v),
+  key: k,
+) -> Result(List(v), table.EtsError) {
+  let encoded_key = table.encode_key(table, key)
+  let table_ref = table.table_ref(table)
+
   case internal.take(table_ref, encoded_key) {
-    Ok(dyn_object) -> decode_take_result(table, dyn_object)
-    Error(internal.NotFound) -> Ok(option.None)
+    Ok(dyn_objects) -> decode_objects(table, dyn_objects)
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
@@ -770,7 +883,8 @@ pub fn take(
 ///
 /// ## Returns
 ///
-/// `Ok(Nil)` when the element was replaced.
+/// - `Ok(True)`: the element was replaced
+/// - `Ok(False)`: the key is not in the table, and nothing changed
 ///
 /// ## Errors
 ///
@@ -808,15 +922,12 @@ pub fn update_element(
   key: k,
   pos: Int,
   value: dynamic.Dynamic,
-) -> Result(Nil, table.EtsError) {
+) -> Result(Bool, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.update_element(table_ref, encoded_key, pos, value) {
-    Ok(_) -> Ok(Nil)
-    Error(internal.NotFound) -> Error(table.TableNotFound)
-    Error(error) -> Error(ffi_error_to_ets_error(error))
-  }
+  internal.update_element(table_ref, encoded_key, pos, value)
+  |> result.map_error(ffi_error_to_ets_error)
 }
 
 /// Delete every object from the table
@@ -1125,7 +1236,7 @@ pub fn load_from_file(
 }
 
 /// Converts an FFI error to the public `EtsError`. Each caller first handles
-/// the FFI errors that have a meaning of their own for it (`NotFound`,
+/// the FFI errors that have a meaning of their own for it (`SeveralObjects`,
 /// `EmptyTable`, `EndOfTable`), so only `TableNotFound` and
 /// `InvalidOperation` arrive here.
 fn ffi_error_to_ets_error(error: internal.EtsFfiError) -> table.EtsError {
@@ -1155,6 +1266,25 @@ fn decode_take_result(
     Ok(dyn_value) -> decode_value_to_option(table, dyn_value)
     Error(err) -> Error(err)
   }
+}
+
+// The values of the objects of one key, in ETS order.
+fn decode_objects(
+  table: table.Table(k, v),
+  dyn_objects: List(dynamic.Dynamic),
+) -> Result(List(v), table.EtsError) {
+  list.try_map(dyn_objects, fn(dyn_object) {
+    use dyn_value <- result.try(extract_value_from_tuple(table, dyn_object))
+    table.decode_value(table, dyn_value)
+    |> result.map_error(table.DecodeError)
+  })
+}
+
+// The error of `get` and `take` for a key with more than one value.
+fn several_values_error(count: Int, function: String) -> table.EtsError {
+  table.OperationFailed(
+    "the key has " <> int.to_string(count) <> " values, use " <> function,
+  )
 }
 
 fn extract_value_from_tuple(
@@ -1218,7 +1348,7 @@ fn collect_remaining_keys(
   acc: List(k),
 ) -> Result(List(k), table.EtsError) {
   case internal.next_key(table_ref, current_dyn_key) {
-    Error(internal.EndOfTable) -> Ok(acc)
+    Error(internal.EndOfTable) -> Ok(list.reverse(acc))
     // Another error comes only when a second process deletes the table
     // during the walk.
     next -> {
@@ -1254,13 +1384,18 @@ fn collect_values_for_keys(
   case keys {
     [] -> Ok(list.reverse(acc))
     [key, ..rest] -> {
-      use value <- result.try(get(table, key))
-      case value {
-        option.Some(v) -> collect_values_for_keys(table, rest, [v, ..acc])
-        option.None ->
+      use values <- result.try(get_all(table, key))
+      case values {
+        [] ->
           Error(table.OperationFailed(
             "Key disappeared during iteration (concurrent delete?)",
           ))
+        _ ->
+          collect_values_for_keys(
+            table,
+            rest,
+            list.append(list.reverse(values), acc),
+          )
       }
     }
   }
@@ -1282,14 +1417,18 @@ fn collect_pairs_for_keys(
   case keys {
     [] -> Ok(list.reverse(acc))
     [key, ..rest] -> {
-      use value <- result.try(get(table, key))
-      case value {
-        option.Some(v) ->
-          collect_pairs_for_keys(table, rest, [#(key, v), ..acc])
-        option.None ->
+      use values <- result.try(get_all(table, key))
+      case values {
+        [] ->
           Error(table.OperationFailed(
             "Key disappeared during iteration (concurrent delete?)",
           ))
+        _ ->
+          collect_pairs_for_keys(
+            table,
+            rest,
+            list.fold(values, acc, fn(pairs, value) { [#(key, value), ..pairs] }),
+          )
       }
     }
   }

@@ -96,11 +96,8 @@ pub opaque type Table(key, value) {
 /// - `InvalidValue`: The configuration has no value encoder
 /// - `DecodeError(DecodeError)`: A key or value in the table does not decode
 ///   with the decoder of the table
-/// - `EncodeError(String)`: A value could not be encoded for storage
 /// - `OperationFailed(String)`: An ETS operation failed; the message gives
 ///   the reason
-/// - `EmptyTable`: The operation needs a table that is not empty
-/// - `EndOfTable`: The iteration reached the end of the table
 pub type EtsError {
   /// The table does not exist, or it was deleted.
   TableNotFound
@@ -112,14 +109,8 @@ pub type EtsError {
   InvalidValue
   /// A key or value in the table does not decode with the decoder of the table.
   DecodeError(decode.DecodeError)
-  /// A value could not be encoded for storage.
-  EncodeError(String)
   /// An ETS operation failed. The message gives the reason.
   OperationFailed(String)
-  /// The operation needs a table that is not empty.
-  EmptyTable
-  /// The iteration reached the end of the table.
-  EndOfTable
 }
 
 /// Get the internal table reference

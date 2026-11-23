@@ -373,6 +373,7 @@ pub fn save_to_disk() -> Result(String, table.EtsError) {
 
 - `operations.set(table, key, value)` - Insert or update value
 - `operations.get(table, key)` - Retrieve value (returns `Option`)
+- `operations.get_all(table, key)` - Retrieve every value of a key, for bag tables → `Result(List(v), EtsError)`
 - `operations.delete(table, key)` - Remove key-value pair
 - `operations.member(table, key)` - Check if key exists (fast) → `Result(Bool, EtsError)`
 - `operations.delete_table(table)` - Delete entire table
@@ -382,12 +383,13 @@ pub fn save_to_disk() -> Result(String, table.EtsError) {
 
 - `operations.insert_new(table, key, value)` - Insert only if key doesn't exist (atomic)
 - `operations.take(table, key)` - Get and remove atomically (for queues)
+- `operations.take_all(table, key)` - Get and remove every value of a key atomically, for bag tables
 
 ### Bulk Operations
 
 **Note:** These now return `Result` to handle decode errors properly:
 
-- `operations.keys(table)` - Get all keys → `Result(List(k), EtsError)`
+- `operations.keys(table)` - Get all keys, in ascending order for an ordered_set table → `Result(List(k), EtsError)`
 - `operations.values(table)` - Get all values → `Result(List(v), EtsError)`
 - `operations.to_list(table)` - Get all pairs → `Result(List(#(k, v)), EtsError)`
 - `operations.size(table)` - Count entries → `Result(Int, EtsError)`
@@ -401,7 +403,7 @@ pub fn save_to_disk() -> Result(String, table.EtsError) {
 
 ### Advanced (Low-level)
 
-- `operations.update_element(table, key, pos, value)` - Update tuple element
+- `operations.update_element(table, key, pos, value)` - Update tuple element → `Result(Bool, EtsError)`, `Ok(False)` when the key is not in the table
 - `operations.match(table, pattern)` - Pattern matching → `Result(List(Dynamic), EtsError)`
 - `operations.match_object(table, pattern)` - Object matching → `Result(List(Dynamic), EtsError)`
 - `operations.select(table, match_spec)` - SQL-like queries → `Result(List(Dynamic), EtsError)`

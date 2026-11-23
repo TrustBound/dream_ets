@@ -3,14 +3,13 @@
 //// Low-level wrappers around FFI. No public API.
 
 import gleam/dynamic
-import gleam/erlang/atom
 import gleam/result
 
 pub type EtsTableRef
 
 pub type EtsFfiError {
-  /// The key was not found
-  NotFound
+  /// The key has more than one object, and the operation needs one
+  SeveralObjects(Int)
   /// The table does not exist (for example, it was deleted)
   TableNotFound
   InvalidOperation(String)
@@ -28,10 +27,10 @@ pub type NewTableError {
 
 /// Creates the table. Returns `Error(NameInUse)` when a named table with
 /// this name already exists, and `Error(OptionsRejected(message))` when ETS
-/// rejects the options.
+/// rejects the name or the options.
 @external(erlang, "internal_ffi", "ets_new")
 fn ets_new(
-  name_atom: atom.Atom,
+  name: String,
   options: List(dynamic.Dynamic),
 ) -> Result(Int, NewTableError)
 
@@ -69,7 +68,7 @@ pub fn ets_insert(
 pub fn ets_lookup(
   table_id: Int,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError)
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
 
 @external(erlang, "internal_ffi", "ets_delete_table")
 pub fn ets_delete_table(table_id: Int) -> Result(Nil, EtsFfiError)
@@ -108,14 +107,20 @@ pub fn ets_insert_new(
 pub fn ets_take(
   table_id: Int,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError)
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
+
+@external(erlang, "internal_ffi", "ets_take_one")
+pub fn ets_take_one(
+  table_id: Int,
+  key: dynamic.Dynamic,
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
 
 @external(erlang, "internal_ffi", "ets_update_element")
 pub fn ets_update_element(
   table_id: Int,
   key: dynamic.Dynamic,
   update_tuple: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError)
+) -> Result(Bool, EtsFfiError)
 
 @external(erlang, "internal_ffi", "to_dynamic")
 pub fn to_dynamic(value: a) -> dynamic.Dynamic
@@ -128,12 +133,13 @@ pub fn unwrap_table_ref_ffi(table: EtsTableRef) -> Int
 
 /// Creates a table with the given name and options. Returns
 /// `Error(NameInUse)` when a named table with this name already exists, and
-/// `Error(OptionsRejected(message))` when ETS rejects the options.
+/// `Error(OptionsRejected(message))` when ETS rejects the name (it has more
+/// than 255 characters) or the options.
 pub fn new_table(
   name: String,
   options: List(dynamic.Dynamic),
 ) -> Result(EtsTableRef, NewTableError) {
-  ets_new(atom.create(name), options)
+  ets_new(name, options)
   |> result.map(wrap_table_ref)
 }
 
@@ -145,10 +151,12 @@ pub fn insert(
   ets_insert(table_id, object)
 }
 
+/// Every object stored under `key`. A set table has at most one, and a bag
+/// table can have more.
 pub fn lookup(
   table: EtsTableRef,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError) {
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_lookup(table_id, key)
 }
@@ -200,12 +208,24 @@ pub fn insert_new(
   ets_insert_new(table_id, object)
 }
 
+/// Remove every object stored under `key`, and return them.
 pub fn take(
   table: EtsTableRef,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError) {
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_take(table_id, key)
+}
+
+/// Remove the object stored under `key` and return it in a list, in one ETS
+/// call. When the key has more than one object (a bag table), the objects
+/// are put back, and the error is `SeveralObjects` with their count.
+pub fn take_one(
+  table: EtsTableRef,
+  key: dynamic.Dynamic,
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
+  let table_id = unwrap_table_ref(table)
+  ets_take_one(table_id, key)
 }
 
 pub fn update_element(
@@ -213,7 +233,7 @@ pub fn update_element(
   key: dynamic.Dynamic,
   pos: Int,
   value: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError) {
+) -> Result(Bool, EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   let update_tuple = to_dynamic(#(pos, value))
   ets_update_element(table_id, key, update_tuple)

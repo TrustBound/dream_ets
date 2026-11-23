@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `keys`, `values` and `to_list` return rows in ETS order. An `ordered_set`
+  table gives its keys in ascending order. Before, the rows came in reverse
+  order: an ordered table with the keys a, b, c gave `["c", "b", "a"]`.
+- `get` and `take` on a bag table key with more than one value return
+  `Error(OperationFailed("the key has 2 values, use get_all"))` (or
+  `take_all`), and `take` leaves the values in the table. Before, they
+  returned a `DecodeError`, and `take` removed the values. `values` and
+  `to_list` now return every value of such a key.
+- `config.create` with a table name of more than 255 characters returns
+  `Error(OperationFailed("ETS rejected the table name: system_limit"))`.
+  Before, it crashed the calling process.
+
 - An operation on a table that was deleted raised the ETS `badarg` error and
   crashed the calling process, although the docs and `EtsError` said it
   returns `Error(TableNotFound)`. The FFI now catches `badarg`, checks that
@@ -22,7 +34,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   example a bad match specification), now returns `OperationFailed` (see
   Changed).
 
+### Added
+
+- `operations.get_all(table, key)` returns every value of a key, and
+  `operations.take_all(table, key)` returns and removes them in one ETS
+  operation. A bag or duplicate_bag table can have several values for one
+  key. Both work on every table type.
+
 ### Breaking Changes
+
+- `operations.update_element()` returns `Result(Bool, EtsError)`: `Ok(True)`
+  when it changed the element, and `Ok(False)` when the key is not in the
+  table. Before, it returned `Ok(Nil)`, and `Error(TableNotFound)` for a
+  missing key in a table that exists.
+- `config.keypos()` is removed. A table stores `{key, value}` with the key
+  first. Any other key position made `keys` and the other operations return
+  wrong results.
+- The `EtsError` constructors `EncodeError`, `EmptyTable` and `EndOfTable`
+  are removed. No function returned them.
+- `gleam_json` is no longer a dependency of the package. No source file used
+  it. A project that stores JSON values needs its own `gleam_json`
+  dependency.
+- In `dream_ets/internal`, `lookup` and `take` return a list of objects,
+  `take_one` is new, `update_element` returns `Result(Bool, _)`, and
+  `EtsFfiError` has `SeveralObjects(Int)` in place of `NotFound`.
 
 - `operations.member()` now returns `Result(Bool, EtsError)` instead of
   `Bool`, so that a deleted table is `Error(TableNotFound)` and not `False`.
@@ -40,6 +75,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 list from `match()`, `match_object()` or `select()`, handle the `Result` in
 the same way. Code that matched on `EtsFfiError` must handle
 `TableNotFound`.
+Where you matched `Ok(Nil)` from `update_element()`, match `Ok(True)` and
+`Ok(False)`. Remove calls to `config.keypos()`. Remove `case` branches for
+`EncodeError`, `EmptyTable` and `EndOfTable`. Code that relied on the reverse
+order of `keys()`, `values()` or `to_list()` on an `ordered_set` table now
+gets ascending order. On a bag table, read a key with `get_all()` and
+`take_all()`.
 
 ### Documentation
 
@@ -49,16 +90,16 @@ the same way. Code that matched on `EtsFfiError` must handle
 
 ### Testing
 
-- 262 tests, 0 failed, in about 0.07 seconds, with the coverage report on. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
+- 279 tests, 0 failed, in about 0.09 seconds, with the coverage report on. Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
 
 ### Changed
 
 - Moved to its own repository.
 - Rejected table options and refused operations now return
   `OperationFailed` instead of crashing the caller. When ETS rejects the
-  options of `config.create` (for example `config.keypos(0)`), the result is
-  `Error(OperationFailed("ETS rejected the table options: badarg"))`, with
-  the reason that ETS gave. When ETS refuses an operation on a table that
+  name of `config.create` (a name of more than 255 characters), the result
+  is `Error(OperationFailed("ETS rejected the table name: system_limit"))`,
+  with the reason that ETS gave. When ETS refuses an operation on a table that
   exists (for example a write to a protected table, or any operation on a
   private table, from a process that does not own it), the operations and
   the counter helpers return

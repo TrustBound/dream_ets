@@ -82,7 +82,6 @@ pub opaque type TableConfig(key, value) {
     name: String,
     table_type: TableType,
     access: Access,
-    keypos: Int,
     read_concurrency: Bool,
     write_concurrency: Bool,
     compressed: Bool,
@@ -378,7 +377,6 @@ pub fn new(name: String) -> TableConfig(k, v) {
     name: name,
     table_type: Set,
     access: Public,
-    keypos: 1,
     read_concurrency: False,
     write_concurrency: False,
     compressed: False,
@@ -431,7 +429,6 @@ pub fn table_type(
     name,
     _,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
@@ -445,7 +442,6 @@ pub fn table_type(
     name: name,
     table_type: type_,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
@@ -501,7 +497,6 @@ pub fn access(
     name,
     table_type,
     _,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
@@ -515,71 +510,6 @@ pub fn access(
     name: name,
     table_type: table_type,
     access: access_mode,
-    keypos: keypos,
-    read_concurrency: read_concurrency,
-    write_concurrency: write_concurrency,
-    compressed: compressed,
-    key_encoder: key_encoder,
-    key_decoder: key_decoder,
-    value_encoder: value_encoder,
-    value_decoder: value_decoder,
-  )
-}
-
-/// Set the key position in tuples (default: 1)
-///
-/// Configures which element of a tuple to use as the key. This is an advanced
-/// feature for tuple-based tables. **Most users will never need this.**
-///
-/// ## Parameters
-///
-/// - `config`: The table configuration to modify
-/// - `pos`: The 1-based position of the key in tuples (default: 1)
-///
-/// ## Returns
-///
-/// The updated configuration.
-///
-/// ## Note
-///
-/// This is only relevant when storing tuples directly in ETS. For typed
-/// tables using encoders/decoders (the recommended approach), this setting
-/// is handled automatically.
-///
-/// ## Example
-///
-/// ### Set the key position <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L273-L280"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
-///
-/// ```gleam
-/// pub fn explicit_keypos() -> Result(table.Table(String, String), table.EtsError) {
-///   // Key position 1 is the default; typed tables store {key, value}
-///   config.new("doc_config_keypos")
-///   |> config.keypos(1)
-///   |> config.key_string()
-///   |> config.value_string()
-///   |> config.create()
-/// }
-/// ```
-pub fn keypos(config: TableConfig(k, v), pos: Int) -> TableConfig(k, v) {
-  let TableConfig(
-    name,
-    table_type,
-    access,
-    _,
-    read_concurrency,
-    write_concurrency,
-    compressed,
-    key_encoder,
-    key_decoder,
-    value_encoder,
-    value_decoder,
-  ) = config
-
-  TableConfig(
-    name: name,
-    table_type: table_type,
-    access: access,
-    keypos: pos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
@@ -636,7 +566,6 @@ pub fn read_concurrency(
     name,
     table_type,
     access,
-    keypos,
     _,
     write_concurrency,
     compressed,
@@ -650,7 +579,6 @@ pub fn read_concurrency(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: enabled,
     write_concurrency: write_concurrency,
     compressed: compressed,
@@ -715,7 +643,6 @@ pub fn write_concurrency(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     _,
     compressed,
@@ -729,7 +656,6 @@ pub fn write_concurrency(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: enabled,
     compressed: compressed,
@@ -790,7 +716,6 @@ pub fn compressed(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     _,
@@ -804,7 +729,6 @@ pub fn compressed(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: enabled,
@@ -893,7 +817,6 @@ pub fn key(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
@@ -907,7 +830,6 @@ pub fn key(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
@@ -1010,7 +932,6 @@ pub fn value(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
@@ -1024,7 +945,6 @@ pub fn value(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
@@ -1163,9 +1083,9 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 /// - `Error(TableAlreadyExists)`: A table with this name already exists
 /// - `Error(InvalidKey)`: Key encoder/decoder not set
 /// - `Error(InvalidValue)`: Value encoder/decoder not set
-/// - `Error(OperationFailed("ETS rejected the table options: badarg"))`: ETS
-///   rejected the table options (for example, `keypos(0)`). The text after the
-///   colon is the reason that ETS gave
+/// - `Error(OperationFailed("ETS rejected the table name: system_limit"))`:
+///   The name has more than 255 characters. The text after the colon is the
+///   reason that ETS gave
 ///
 /// ## Example
 ///
@@ -1228,7 +1148,6 @@ fn validate_config(
     _,
     _,
     _,
-    _,
     key_encoder,
     _key_decoder,
     value_encoder,
@@ -1260,7 +1179,6 @@ fn build_ets_options(
     _,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
@@ -1284,9 +1202,7 @@ fn build_ets_options(
     atom.create("named_table") |> atom_to_dynamic,
     ..options_with_compressed
   ]
-  let final_options = add_keypos_option(keypos, options_with_named)
-
-  Ok(final_options)
+  Ok(options_with_named)
 }
 
 fn table_type_to_atom(table_type: TableType) -> dynamic.Dynamic {
@@ -1336,27 +1252,12 @@ fn add_compressed_option(
   }
 }
 
-fn add_keypos_option(
-  pos: Int,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
-  case pos {
-    1 -> options
-    n -> [create_keypos_tuple(n), ..options]
-  }
-}
-
 fn create_concurrency_tuple(
   option_name: String,
   value: Bool,
 ) -> dynamic.Dynamic {
   let key_atom = atom.create(option_name)
   internal.to_dynamic(#(key_atom, value))
-}
-
-fn create_keypos_tuple(pos: Int) -> dynamic.Dynamic {
-  let key_atom = atom.create("keypos")
-  internal.to_dynamic(#(key_atom, pos))
 }
 
 fn atom_to_dynamic(a: atom.Atom) -> dynamic.Dynamic {
@@ -1369,7 +1270,6 @@ fn create_table_with_options(
 ) -> Result(table.Table(k, v), table.EtsError) {
   let TableConfig(
     name,
-    _,
     _,
     _,
     _,

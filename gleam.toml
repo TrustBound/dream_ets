@@ -10,10 +10,11 @@ links = [
 
 [dependencies]
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
-gleam_json = ">= 3.0.1 and < 4.0.0"
 gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
+# The snippets store custom types as JSON.
+gleam_json = ">= 3.0.1 and < 4.0.0"
 # Switched to a Hex version range once it is published.
 dream_test = { git = "https://github.com/TrustBound/dream_test.git", ref = "1639959578a14ae3577f8e3ae5cac058f933aa53" }
 # Switched to a Hex version range once it is published.

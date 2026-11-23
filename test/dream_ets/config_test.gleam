@@ -5,6 +5,7 @@
 
 import dream_ets/config
 import dream_ets/encoders
+import dream_ets/internal
 import dream_ets/operations
 import dream_ets/table.{
   InvalidKey, InvalidValue, OperationFailed, TableAlreadyExists,
@@ -13,8 +14,10 @@ import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/ets_info.{table_info}
+import gleam/dynamic
 import gleam/option
 import gleam/result
+import gleam/string
 import matchers/extract_table_name.{extract_table_name}
 
 pub fn tests() -> TestSuite {
@@ -301,27 +304,6 @@ pub fn tests() -> TestSuite {
         |> or_fail_with("Should create a private table")
       }),
     ]),
-    group("keypos", [
-      it("creates a table with the given key position", fn() {
-        // Arrange
-        let config_value =
-          config.new("config_keypos")
-          |> config.keypos(2)
-          |> config.key_string()
-          |> config.value_string()
-
-        // Act
-        let result =
-          config.create(config_value)
-          |> result.map(table_info(_, "keypos"))
-
-        // Assert
-        result
-        |> should
-        |> be_equal(Ok("2"))
-        |> or_fail_with("Should use key position 2")
-      }),
-    ]),
     group("read_concurrency", [
       it("turns read concurrency on when write concurrency is also on", fn() {
         // Arrange
@@ -582,13 +564,12 @@ pub fn tests() -> TestSuite {
         |> be_equal(Error(TableAlreadyExists))
         |> or_fail_with("Should return TableAlreadyExists")
       }),
-      it("returns OperationFailed when ETS rejects the options", fn() {
+      it("returns OperationFailed for a name of more than 255 characters", fn() {
         // Arrange
         let config_value =
-          config.new("config_create_rejected")
+          config.new(string.repeat("a", 256))
           |> config.key_string()
           |> config.value_string()
-          |> config.keypos(0)
 
         // Act
         let result = config.create(config_value)
@@ -597,10 +578,34 @@ pub fn tests() -> TestSuite {
         result
         |> should
         |> be_equal(
-          Error(OperationFailed("ETS rejected the table options: badarg")),
+          Error(OperationFailed("ETS rejected the table name: system_limit")),
         )
-        |> or_fail_with("Should return OperationFailed for key position 0")
+        |> or_fail_with(
+          "Should return OperationFailed for a name that is too long",
+        )
       }),
+      it(
+        "new_table returns OptionsRejected for an option ETS does not know",
+        fn() {
+          // Arrange
+          let options = [dynamic.string("not an option")]
+
+          // Act
+          let result =
+            internal.new_table("config_new_table_rejected", options)
+            |> result.replace(Nil)
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Error(internal.OptionsRejected(
+              "ETS rejected the table options: badarg",
+            )),
+          )
+          |> or_fail_with("Should return OptionsRejected for a bad option")
+        },
+      ),
     ]),
   ])
 }

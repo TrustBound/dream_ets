@@ -270,3 +270,19 @@ pub fn save_and_load(
   // The loaded table has the same name, so `users` finds it again
   operations.get(users, "user:123")
 }
+
+pub fn tags_of_post(
+  tags: table.Table(String, String),
+) -> Result(List(String), table.EtsError) {
+  // `tags` is a bag table, so one key can have several values
+  use _ <- result.try(operations.set(tags, "post-1", "gleam"))
+  use _ <- result.try(operations.set(tags, "post-1", "erlang"))
+  operations.get_all(tags, "post-1")
+}
+
+pub fn remove_tags(
+  tags: table.Table(String, String),
+) -> Result(List(String), table.EtsError) {
+  // Read and remove every value of the key in one operation
+  operations.take_all(tags, "post-1")
+}

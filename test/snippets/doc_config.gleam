@@ -269,12 +269,3 @@ pub fn private_scratch() -> Result(table.Table(String, String), table.EtsError) 
   |> config.value_string()
   |> config.create()
 }
-
-pub fn explicit_keypos() -> Result(table.Table(String, String), table.EtsError) {
-  // Key position 1 is the default; typed tables store {key, value}
-  config.new("doc_config_keypos")
-  |> config.keypos(1)
-  |> config.key_string()
-  |> config.value_string()
-  |> config.create()
-}

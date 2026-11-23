@@ -4,7 +4,7 @@
 
 -module(internal_ffi).
 
--export([ets_new/2, ets_insert/2, ets_lookup/2, ets_delete_table/1, ets_delete_key/2,
+-export([ets_new/2, ets_insert/2, ets_lookup/2, ets_take_one/2, ets_delete_table/1, ets_delete_key/2,
          ets_delete_all_objects/1, ets_first/1, ets_next/2, ets_member/2,
          ets_insert_new/2, ets_take/2, ets_update_element/3,
          ets_match/2, ets_match_object/2, ets_select/2, ets_tab2file/2, ets_file2tab/1,
@@ -17,7 +17,17 @@
 %% {error, name_in_use}. Otherwise ETS rejected the options, and the result is
 %% {error, {options_rejected, Message}}, where Message gives the reason that
 %% ETS raised.
-ets_new(NameAtom, Options) ->
+ets_new(Name, Options) ->
+    try binary_to_atom(Name, utf8) of
+        NameAtom -> ets_new_named(NameAtom, Options)
+    catch
+        %% An atom has at most 255 characters.
+        error:Reason ->
+            {error, {options_rejected,
+                     <<"ETS rejected the table name: ", (format_error(Reason))/binary>>}}
+    end.
+
+ets_new_named(NameAtom, Options) ->
     try
         {ok, ets:new(NameAtom, Options)}
     catch
@@ -44,8 +54,10 @@ ets_insert(TableId, Object) ->
         {ok, nil}
     end).
 
+%% Returns every object stored under Key, as a list. A set table has at most
+%% one. A bag table can have more.
 ets_lookup(TableId, Key) ->
-    with_table(TableId, fun() -> lookup_result(ets:lookup(TableId, Key)) end).
+    with_table(TableId, fun() -> {ok, ets:lookup(TableId, Key)} end).
 
 ets_delete_table(TableId) ->
     with_table(TableId, fun() ->
@@ -91,16 +103,29 @@ ets_member(TableId, Key) ->
 ets_insert_new(TableId, Object) ->
     with_table(TableId, fun() -> {ok, ets:insert_new(TableId, Object)} end).
 
+%% Removes every object stored under Key, and returns them as a list.
 ets_take(TableId, Key) ->
-    with_table(TableId, fun() -> lookup_result(ets:take(TableId, Key)) end).
+    with_table(TableId, fun() -> {ok, ets:take(TableId, Key)} end).
+
+%% Removes the object stored under Key and returns it in a list, in one ETS
+%% call. When the key has more than one object (a bag table), the objects
+%% are put back, and the error is {several_objects, Count}.
+ets_take_one(TableId, Key) ->
+    with_table(TableId, fun() ->
+        case ets:take(TableId, Key) of
+            [_, _ | _] = Objects ->
+                ets:insert(TableId, Objects),
+                {error, {several_objects, length(Objects)}};
+            Objects ->
+                {ok, Objects}
+        end
+    end).
 
 ets_update_element(TableId, Key, {Pos, Value}) ->
     with_table(TableId, fun() ->
         case ets:update_element(TableId, Key, {Pos, Value}) of
-            true ->
-                {ok, nil};
-            false ->
-                {error, not_found}
+            Updated ->
+                {ok, Updated}
         end
     end).
 
@@ -141,13 +166,6 @@ ets_file2tab(Filename) ->
     end.
 
 %% Lookup and take return a list of objects
-lookup_result([]) ->
-    {error, not_found};
-lookup_result([Object]) ->
-    {ok, Object};
-lookup_result(Objects) ->
-    {ok, Objects}.
-
 %% Runs Operation, which returns {ok, Value} or {error, Reason}.
 %%
 %% ETS raises badarg when the table does not exist, and also for other

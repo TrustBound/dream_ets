@@ -7,6 +7,7 @@ import dream_ets/table
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
+import fixtures/bag_table
 import fixtures/ets_info.{table_info}
 import gleam/dynamic
 import gleam/option
@@ -345,17 +346,6 @@ pub fn tests() -> TestSuite {
         |> should
         |> be_equal(Ok("private"))
         |> or_fail_with("Should create a private table")
-      }),
-      it("explicit_keypos uses key position 1", fn() {
-        // Act
-        let result =
-          doc_config.explicit_keypos() |> result.map(table_info(_, "keypos"))
-
-        // Assert
-        result
-        |> should
-        |> be_equal(Ok("1"))
-        |> or_fail_with("Should use key position 1")
       }),
       it("quick_start names the three tables", fn() {
         // Act
@@ -1279,6 +1269,37 @@ pub fn tests() -> TestSuite {
         |> should
         |> be_equal(Ok(option.Some("Alice")))
         |> or_fail_with("Should restore Alice")
+      }),
+      it("tags_of_post returns both tags", fn() {
+        // Arrange
+        let result = {
+          use tags <- result.try(bag_table.bag_string_table("doc_ops_tags"))
+
+          // Act
+          doc_operations.tags_of_post(tags)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["gleam", "erlang"]))
+        |> or_fail_with("Should return both tags of the post")
+      }),
+      it("remove_tags returns the tags that it removed", fn() {
+        // Arrange
+        let result = {
+          use tags <- result.try(bag_table.bag_string_table("doc_ops_remove"))
+          use _ <- result.try(doc_operations.tags_of_post(tags))
+
+          // Act
+          doc_operations.remove_tags(tags)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["gleam", "erlang"]))
+        |> or_fail_with("Should return both tags")
       }),
     ]),
   ])
