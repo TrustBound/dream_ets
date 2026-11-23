@@ -5,7 +5,7 @@ All notable changes to `dream_ets` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 3.0.0 - Unreleased
+## [3.0.0] - Unreleased
 
 ### Fixed
 
@@ -66,7 +66,7 @@ the same way. Code that matched on `EtsFfiError` must handle
   `dream_ets/internal` module, `new_table` now returns
   `Result(EtsTableRef, NewTableError)`.
 
-## 2.0.0 - 2025-12-08
+## [2.0.0] - 2025-12-08
 
 ### Breaking Changes
 
@@ -127,20 +127,20 @@ case operations.keys(table) {
 - Refactored collection functions to handle errors properly without panic
 - Added `format_error()` in FFI to convert Erlang errors to strings
 
-## 1.0.2 - 2025-11-21
+## [1.0.2] - 2025-11-21
 
 ### Changed
 
 - Added HexDocs documentation badge to README
 
-## 1.0.1 - 2025-11-22
+## [1.0.1] - 2025-11-22
 
 ### Fixed
 
 - Fixed logo display on hex.pm by using full GitHub URL
 - Added Dream logo to README
 
-## 1.0.0 - 2025-11-21
+## [1.0.0] - 2025-11-21
 
 ### Added
 
