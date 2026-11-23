@@ -11,13 +11,11 @@ links = [
 [documentation]
 pages = [
     { title = "Getting started", path = "guides/getting-started.html", source = "./docs/guides/getting-started.md" },
-    { title = "Table configuration", path = "guides/table-configuration.html", source = "./docs/guides/table-configuration.md" },
-    { title = "Reading and writing", path = "guides/reading-and-writing.html", source = "./docs/guides/reading-and-writing.md" },
-    { title = "Custom types", path = "guides/custom-types.html", source = "./docs/guides/custom-types.md" },
-    { title = "Atomic operations", path = "guides/atomic-operations.html", source = "./docs/guides/atomic-operations.md" },
-    { title = "Counters", path = "guides/counters.html", source = "./docs/guides/counters.md" },
-    { title = "Persistence", path = "guides/persistence.html", source = "./docs/guides/persistence.md" },
-    { title = "Error handling", path = "guides/error-handling.html", source = "./docs/guides/error-handling.md" },
+    { title = "Caching data in memory", path = "guides/caching.html", source = "./docs/guides/caching.md" },
+    { title = "Counting events", path = "guides/counting.html", source = "./docs/guides/counting.md" },
+    { title = "Locks and work queues", path = "guides/locks-and-queues.html", source = "./docs/guides/locks-and-queues.md" },
+    { title = "Saving a table to disk", path = "guides/saving-to-disk.html", source = "./docs/guides/saving-to-disk.md" },
+    { title = "Settings and errors reference", path = "guides/settings-and-errors.html", source = "./docs/guides/settings-and-errors.md" },
 ]
 
 [dependencies]

@@ -28,7 +28,7 @@ pub fn set_twice(
   users: table.Table(String, String),
 ) -> Result(Nil, table.EtsError) {
   use _ <- result.try(operations.set(users, "user:123", "Alice"))
-  // Replaces the existing value
+  // In a set table, this replaces the existing value
   operations.set(users, "user:123", "Bob")
 }
 
@@ -60,24 +60,6 @@ pub fn describe_size(users: table.Table(String, String)) -> String {
     Ok(count) -> "Table has " <> int.to_string(count) <> " entries"
     Error(error) -> "Size failed: " <> string.inspect(error)
   }
-}
-
-pub fn track_size(
-  cache: table.Table(String, String),
-  stats: table.Table(String, Int),
-) -> Result(option.Option(Int), table.EtsError) {
-  // Increment on insert
-  use _ <- result.try(operations.set(cache, "user:1", "Ada"))
-  use _ <- result.try(helpers.increment(stats, "size"))
-  use _ <- result.try(operations.set(cache, "user:2", "Grace"))
-  use _ <- result.try(helpers.increment(stats, "size"))
-
-  // Decrement on delete
-  use _ <- result.try(operations.delete(cache, "user:1"))
-  use _ <- result.try(helpers.decrement(stats, "size"))
-
-  // Fast O(1) size lookup
-  operations.get(stats, "size")
 }
 
 pub fn list_keys(users: table.Table(String, String)) -> List(String) {

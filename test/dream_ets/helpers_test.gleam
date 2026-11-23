@@ -1,16 +1,22 @@
 //// Tests for `dream_ets/helpers`: the table functions and the counter
 //// functions.
 
+import dream_ets/config
+import dream_ets/encoders
 import dream_ets/helpers
 import dream_ets/operations
-import dream_ets/table.{OperationFailed, TableAlreadyExists, TableNotFound}
+import dream_ets/table.{
+  DecodeError, OperationFailed, TableAlreadyExists, TableNotFound,
+}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/deleted_table.{deleted_counter}
 import fixtures/ets_info.{table_info}
 import fixtures/guarded_table.{protected_counter}
+import fixtures/many_processes
 import fixtures/other_process
+import gleam/dynamic/decode
 import gleam/option
 import gleam/result
 import matchers/extract_table_name.{extract_table_name}
@@ -314,6 +320,212 @@ pub fn tests() -> TestSuite {
         |> or_fail_with("Should store -7")
       }),
     ]),
+    group("concurrent callers", [
+      it("increment from 10 processes, 1000 times each, gives 10000", fn() {
+        // Arrange
+        let result = {
+          use counter <- result.try(
+            helpers.new_counter("counter_concurrent_increment")
+            |> result.replace_error("create failed"),
+          )
+
+          // Act
+          use _ <- result.try(
+            many_processes.run_each(10, fn(_) {
+              many_processes.repeat(1000, fn() {
+                helpers.increment(counter, "hits")
+              })
+            }),
+          )
+          operations.get(counter, "hits")
+          |> result.replace_error("get failed")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(option.Some(10_000)))
+        |> or_fail_with("Should lose no increment")
+      }),
+      it("increment_by 3 from 10 processes, 1000 times each, gives 30000", fn() {
+        // Arrange
+        let result = {
+          use counter <- result.try(
+            helpers.new_counter("counter_concurrent_increment_by")
+            |> result.replace_error("create failed"),
+          )
+
+          // Act
+          use _ <- result.try(
+            many_processes.run_each(10, fn(_) {
+              many_processes.repeat(1000, fn() {
+                helpers.increment_by(counter, "hits", 3)
+              })
+            }),
+          )
+          operations.get(counter, "hits")
+          |> result.replace_error("get failed")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(option.Some(30_000)))
+        |> or_fail_with("Should lose no increment_by")
+      }),
+      it("decrement from 10 processes, 1000 times each, gives -10000", fn() {
+        // Arrange
+        let result = {
+          use counter <- result.try(
+            helpers.new_counter("counter_concurrent_decrement")
+            |> result.replace_error("create failed"),
+          )
+
+          // Act
+          use _ <- result.try(
+            many_processes.run_each(10, fn(_) {
+              many_processes.repeat(1000, fn() {
+                helpers.decrement(counter, "hits")
+              })
+            }),
+          )
+          operations.get(counter, "hits")
+          |> result.replace_error("get failed")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(option.Some(-10_000)))
+        |> or_fail_with("Should lose no decrement")
+      }),
+      it(
+        "decrement_by 3 from 10 processes, 1000 times each, gives -30000",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              helpers.new_counter("counter_concurrent_decrement_by")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            use _ <- result.try(
+              many_processes.run_each(10, fn(_) {
+                many_processes.repeat(1000, fn() {
+                  helpers.decrement_by(counter, "hits", 3)
+                })
+              }),
+            )
+            operations.get(counter, "hits")
+            |> result.replace_error("get failed")
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(Ok(option.Some(-30_000)))
+          |> or_fail_with("Should lose no decrement_by")
+        },
+      ),
+      it(
+        "5 processes that increment_by 3 and 5 that decrement give 10000",
+        fn() {
+          // Arrange
+          let result = {
+            use counter <- result.try(
+              helpers.new_counter("counter_concurrent_mixed")
+              |> result.replace_error("create failed"),
+            )
+
+            // Act
+            use _ <- result.try(
+              many_processes.run_each(10, fn(index) {
+                many_processes.repeat(1000, fn() { mixed_step(counter, index) })
+              }),
+            )
+            operations.get(counter, "hits")
+            |> result.replace_error("get failed")
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(Ok(option.Some(10_000)))
+          |> or_fail_with("Should lose no increment and no decrement")
+        },
+      ),
+    ]),
+    group("values that are not counters", [
+      it(
+        "increment_by returns DecodeError for a value that is not an Int",
+        fn() {
+          // Arrange
+          let result = {
+            use names <- result.try(helpers.new_string_table(
+              "counter_not_int_error",
+            ))
+            use _ <- result.try(operations.set(names, "hits", "many"))
+
+            // Act
+            helpers.increment_by(int_view(names), "hits", 5)
+          }
+
+          // Assert
+          result
+          |> should
+          |> be_equal(
+            Error(DecodeError(decode.DecodeError("Int", "String", []))),
+          )
+          |> or_fail_with("Should return the DecodeError of get")
+        },
+      ),
+      it("decrement_by refuses and keeps a value that is not an Int", fn() {
+        // Arrange
+        let result = {
+          use names <- result.try(helpers.new_string_table(
+            "counter_not_int_kept",
+          ))
+          use _ <- result.try(operations.set(names, "hits", "many"))
+
+          // Act
+          let refused = helpers.decrement_by(int_view(names), "hits", 5)
+          Ok(#(refused, operations.get(names, "hits")))
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(
+          Ok(#(
+            Error(DecodeError(decode.DecodeError("Int", "String", []))),
+            Ok(option.Some("many")),
+          )),
+        )
+        |> or_fail_with("Should not change the value")
+      }),
+      it("increment returns OperationFailed for a bag table", fn() {
+        // Arrange
+        let result = {
+          use counter <- result.try(
+            config.new("counter_bag_refused")
+            |> config.counter()
+            |> config.table_type(config.table_type_bag())
+            |> config.create(),
+          )
+          use _ <- result.try(operations.set(counter, "hits", 1))
+
+          // Act
+          helpers.increment(counter, "hits")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Error(OperationFailed("ETS refused the operation: badarg")))
+        |> or_fail_with("Should refuse a counter in a bag table")
+      }),
+    ]),
     group("refused operations", [
       it(
         "increment returns OperationFailed for a protected table of another process",
@@ -409,4 +621,29 @@ pub fn tests() -> TestSuite {
       ),
     ]),
   ])
+}
+
+// Processes with an even index add 3, and processes with an odd index
+// subtract 1.
+fn mixed_step(
+  counter: table.Table(String, Int),
+  index: Int,
+) -> Result(Int, table.EtsError) {
+  case index % 2 == 0 {
+    True -> helpers.increment_by(counter, "hits", 3)
+    False -> helpers.decrement(counter, "hits")
+  }
+}
+
+// The same ETS table as `names`, with Int values, so that a counter helper
+// meets a value that is not an Int.
+fn int_view(names: table.Table(String, String)) -> table.Table(String, Int) {
+  table.new_table(
+    table.table_ref(names),
+    table.table_name(names),
+    encoders.string_encoder,
+    encoders.string_decoder(),
+    encoders.int_encoder,
+    encoders.int_decoder(),
+  )
 }

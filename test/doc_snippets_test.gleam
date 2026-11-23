@@ -660,24 +660,6 @@ pub fn tests() -> TestSuite {
         |> be_equal(Ok("Size failed: TableNotFound"))
         |> or_fail_with("Should report the deleted table")
       }),
-      it("track_size keeps the count in a counter", fn() {
-        // Arrange
-        let result = {
-          use cache <- result.try(helpers.new_string_table(
-            "doc_ops_track_cache",
-          ))
-          use stats <- result.try(helpers.new_counter("doc_ops_track_stats"))
-
-          // Act
-          doc_operations.track_size(cache, stats)
-        }
-
-        // Assert
-        result
-        |> should
-        |> be_equal(Ok(option.Some(1)))
-        |> or_fail_with("Should count one entry")
-      }),
       it("list_keys labels each key", fn() {
         // Arrange
         let result = {

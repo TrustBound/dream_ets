@@ -11,7 +11,8 @@ It is a major version because several functions now return a `Result`. Read the 
 - **A deleted table is an error, not a crash**: every operation returns `Error(TableNotFound)` for a table that was deleted
 - **`member`, `match`, `match_object` and `select` return a `Result` (breaking)**: a deleted table is no longer the same as "not found"
 - **`update_element` says if it changed something (breaking)**: `Ok(True)` when it changed the element, `Ok(False)` when the key is not in the table
-- **Bag tables work**: new `get_all` and `take_all` return every value of a key
+- **Counters are atomic**: `increment`, `increment_by`, `decrement` and `decrement_by` lose no update when many processes count one key
+- **Bag tables work**: new `get_all` and `take_all` return every value of a key, and `size` counts every value
 - **Rows come in ETS order**: an `ordered_set` table gives its keys in ascending order
 - **Its own repository**: `dream_ets` now lives at [TrustBound/dream_ets](https://github.com/TrustBound/dream_ets), with its own version and its own releases
 
@@ -34,9 +35,21 @@ Rejected table options and refused operations now return `OperationFailed` and n
 
 ### Guides
 
-The package has guides in [`docs/guides/`](https://github.com/TrustBound/dream_ets/tree/main/docs/guides). The README is short and links to them, and HexDocs shows the guides.
+The package has five task guides and one reference page in [`docs/guides/`](https://github.com/TrustBound/dream_ets/tree/main/docs/guides). Each guide walks through one task from start to finish: getting started, caching data in memory, counting events, locks and work queues, and saving a table to disk. Each one has tested code, its failure cases, a test of your own code and common pitfalls. The settings and errors reference lists every table setting and every error. The README is short and links to them, and HexDocs shows the guides.
 
 ## Bug Fixes
+
+### The Counter Helpers Are Atomic
+
+`helpers.increment`, `increment_by`, `decrement` and `decrement_by` said that they are atomic, but each one was a `get` followed by a `set`. When many processes changed one key at the same time, updates got lost without an error: 10 processes that each called `increment` 1000 times gave counts from 1000 to 1702 in test runs, not 10000. Each helper is now one `ets:update_counter/4` call, and the same test gives exactly 10000 on every run. A missing key still starts at 0. A value that is not an `Int` still gives a `DecodeError` and stays unchanged.
+
+### `size` Counts Every Stored Value
+
+`operations.size` counted keys, not stored key-value pairs. In a bag or duplicate_bag table, a key with two values counted as 1. It now returns the number of objects that ETS keeps for the table, so that key counts as 2. It reads the count in constant time and no longer walks the table.
+
+### The `set` Docs Name Each Table Type
+
+The doc comment of `operations.set` said that a second `set` of a key updates the value. That is true for `set` and `ordered_set` tables. In a `bag` table, `set` adds a value that the key does not have yet. In a `duplicate_bag` table, `set` always adds the value. The doc comment now says this. The behavior did not change.
 
 ### An Operation on a Deleted Table Returns `TableNotFound`
 
@@ -78,7 +91,7 @@ pub fn describe_user(
 
 ## Testing
 
-- 279 tests run, 0 failed, in about 0.09 seconds with the coverage report on (Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2)
+- 347 tests run, 0 failed, in 0.41 to 0.92 seconds over three runs with the coverage report on, and 100% line coverage of `src/` (373/373 lines) (Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2)
 
 ## Upgrading
 
@@ -131,7 +144,17 @@ On an `ordered_set` table these now give ascending order, not the reverse.
 
 Read a key that can have several values with `get_all()` and `take_all()`.
 
-#### 9. Code that uses `dream_ets/internal`
+#### 9. `size()` on a bag or duplicate_bag table
+
+`size()` now counts every value. With two values under one key, it returns `Ok(2)`, not `Ok(1)`. To count the keys of such a table, use `list.length` on the result of `keys()`. On a `set` or `ordered_set` table, the result is the same as before.
+
+#### 10. Counter helpers on a table that is not a counter table
+
+`increment`, `increment_by`, `decrement` and `decrement_by` now need a `set` or `ordered_set` table that stores its values as plain integers, as `helpers.new_counter` and `config.counter()` make. On a bag or duplicate_bag table, or on a table whose value encoder stores an `Int` in another form, they return `Error(OperationFailed("ETS refused the operation: badarg"))`. Before, they read and wrote the value through the encoders of the table.
+
+#### 11. Code that uses `dream_ets/internal`
+
+- `update_counter` and `size` (and their `ets_update_counter` and `ets_size` FFI functions) are new
 
 - `EtsFfiError` has a new `TableNotFound` variant, and `SeveralObjects(Int)` in place of `NotFound`
 - `insert`, `delete_table`, `delete_key`, `delete_object`, `delete_all_objects`, `member`, `insert_new`, `match`, `match_object` and `select` (and their `ets_*` FFI functions) return `Result(_, EtsFfiError)`
@@ -143,13 +166,11 @@ Read a key that can have several values with `get_all()` and `take_all()`.
 - [dream_ets](https://hexdocs.pm/dream_ets) - v3.0.0
 - [README](https://github.com/TrustBound/dream_ets/blob/main/README.md)
 - [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md)
-- [Table configuration](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/table-configuration.md)
-- [Reading and writing](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/reading-and-writing.md)
-- [Custom types](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/custom-types.md)
-- [Atomic operations](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/atomic-operations.md)
-- [Counters](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counters.md)
-- [Persistence](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/persistence.md)
-- [Error handling](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/error-handling.md)
+- [Caching data in memory](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/caching.md)
+- [Counting events](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counting.md)
+- [Locks and work queues](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/locks-and-queues.md)
+- [Saving a table to disk](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/saving-to-disk.md)
+- [Settings and errors reference](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/settings-and-errors.md)
 - [Changelog](https://github.com/TrustBound/dream_ets/blob/main/CHANGELOG.md)
 
 ## Community

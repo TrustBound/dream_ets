@@ -122,6 +122,17 @@ pub fn ets_update_element(
   update_tuple: dynamic.Dynamic,
 ) -> Result(Bool, EtsFfiError)
 
+@external(erlang, "internal_ffi", "ets_update_counter")
+pub fn ets_update_counter(
+  table_id: Int,
+  key: dynamic.Dynamic,
+  amount: Int,
+  default_object: dynamic.Dynamic,
+) -> Result(Int, EtsFfiError)
+
+@external(erlang, "internal_ffi", "ets_size")
+pub fn ets_size(table_id: Int) -> Result(Int, EtsFfiError)
+
 @external(erlang, "internal_ffi", "to_dynamic")
 pub fn to_dynamic(value: a) -> dynamic.Dynamic
 
@@ -237,6 +248,27 @@ pub fn update_element(
   let table_id = unwrap_table_ref(table)
   let update_tuple = to_dynamic(#(pos, value))
   ets_update_element(table_id, key, update_tuple)
+}
+
+/// Add `amount` to the integer value stored under `key` and return the new
+/// value, in one ETS call (`ets:update_counter/4`). When the key is not in
+/// the table, ETS first inserts `default_object`. ETS refuses the call
+/// (`InvalidOperation`) when the value is not an integer, or when the table
+/// is a bag or duplicate_bag table.
+pub fn update_counter(
+  table: EtsTableRef,
+  key: dynamic.Dynamic,
+  amount: Int,
+  default_object: dynamic.Dynamic,
+) -> Result(Int, EtsFfiError) {
+  let table_id = unwrap_table_ref(table)
+  ets_update_counter(table_id, key, amount, default_object)
+}
+
+/// The number of objects in the table, in constant time (`ets:info/1`).
+pub fn size(table: EtsTableRef) -> Result(Int, EtsFfiError) {
+  let table_id = unwrap_table_ref(table)
+  ets_size(table_id)
 }
 
 pub fn match(

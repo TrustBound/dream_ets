@@ -34,10 +34,9 @@
 //// - Fine-grained control over table behavior
 
 import dream_ets/config
+import dream_ets/internal
 import dream_ets/operations
 import dream_ets/table
-import gleam/option
-import gleam/result
 
 /// Create a counter table (String keys, Int values)
 ///
@@ -169,8 +168,17 @@ pub fn new_string_table(
 
 /// Atomically increment a counter value
 ///
-/// Increments a counter by 1. If the key doesn't exist, it's created with
-/// value 1. This operation is atomic and safe for concurrent access.
+/// Adds 1 to the value of `key` and returns the new value. A key that is not
+/// in the table starts at 0, so its first increment returns 1.
+///
+/// ## Concurrency
+///
+/// The read, the addition and the write are one ETS operation
+/// (`ets:update_counter/4`). Many processes can change the same key at the
+/// same time, and no change gets lost.
+///
+/// ETS adds to the stored value directly, so the table must store its values
+/// as plain integers, as `config.counter()` and `encoders.int_encoder` do.
 ///
 /// ## Parameters
 ///
@@ -180,10 +188,14 @@ pub fn new_string_table(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after incrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
 /// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
 ///   exists, but ETS refused the operation (for example, the calling
-///   process cannot write to the table)
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
@@ -203,12 +215,6 @@ pub fn new_string_table(
 /// }
 /// ```
 ///
-/// ## Concurrency
-///
-/// This function is **not atomic** in the traditional sense. It performs
-/// get-modify-set operations. For truly atomic increments in high-concurrency
-/// scenarios, consider using Erlang's `:ets.update_counter/3` via FFI.
-///
 /// ## See Also
 ///
 /// - `increment_by()` - Increment by a specific amount
@@ -222,8 +228,9 @@ pub fn increment(
 
 /// Atomically increment a counter value by a specific amount
 ///
-/// Increments a counter by the specified amount. If the key doesn't exist,
-/// it's created with the specified amount as the initial value.
+/// Adds `amount` to the value of `key` and returns the new value. A key
+/// that is not in the table starts at 0, so its first increment returns
+/// `amount`. The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -234,10 +241,14 @@ pub fn increment(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after incrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
 /// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
 ///   exists, but ETS refused the operation (for example, the calling
-///   process cannot write to the table)
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
@@ -272,38 +283,47 @@ pub fn increment_by(
   key: String,
   amount: Int,
 ) -> Result(Int, table.EtsError) {
-  case operations.get(table, key) {
-    Ok(option.Some(current)) ->
-      increment_existing_key(table, key, current, amount)
-    Ok(option.None) -> create_new_counter_key(table, key, amount)
-    Error(err) -> Error(err)
+  let encoded_key = table.encode_key(table, key)
+  // A key that is not in the table starts at 0
+  let default_object =
+    internal.to_dynamic(#(encoded_key, table.encode_value(table, 0)))
+  case
+    internal.update_counter(
+      table.table_ref(table),
+      encoded_key,
+      amount,
+      default_object,
+    )
+  {
+    Ok(new_value) -> Ok(new_value)
+    Error(internal.InvalidOperation(message)) ->
+      refused_update_error(table, key, message)
+    // The FFI of update_counter only returns InvalidOperation and
+    // TableNotFound
+    Error(_) -> Error(table.TableNotFound)
   }
 }
 
-fn increment_existing_key(
+// ETS refused the update. When the stored value does not decode as an Int
+// (or the key has several values), `get` gives the error that says so.
+// Otherwise ETS refused the write itself, for example on a protected table
+// of another process.
+fn refused_update_error(
   table: table.Table(String, Int),
   key: String,
-  current: Int,
-  amount: Int,
+  message: String,
 ) -> Result(Int, table.EtsError) {
-  let new_value = current + amount
-  operations.set(table, key, new_value)
-  |> result.replace(new_value)
-}
-
-fn create_new_counter_key(
-  table: table.Table(String, Int),
-  key: String,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  operations.set(table, key, amount)
-  |> result.replace(amount)
+  case operations.get(table, key) {
+    Ok(_) -> Error(table.OperationFailed(message))
+    Error(error) -> Error(error)
+  }
 }
 
 /// Atomically decrement a counter value
 ///
-/// Decrements a counter by 1. If the key doesn't exist, it's created with
-/// value -1. This operation is safe for concurrent access.
+/// Subtracts 1 from the value of `key` and returns the new value. A key
+/// that is not in the table starts at 0, so its first decrement returns -1.
+/// The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -313,10 +333,14 @@ fn create_new_counter_key(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after decrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
 /// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
 ///   exists, but ETS refused the operation (for example, the calling
-///   process cannot write to the table)
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
@@ -355,8 +379,9 @@ pub fn decrement(
 
 /// Atomically decrement a counter value by a specific amount
 ///
-/// Decrements a counter by the specified amount. If the key doesn't exist,
-/// it's created with the negative of the specified amount as the initial value.
+/// Subtracts `amount` from the value of `key` and returns the new value. A
+/// key that is not in the table starts at 0, so its first decrement returns
+/// `-amount`. The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -367,10 +392,14 @@ pub fn decrement(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after decrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
 /// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
 ///   exists, but ETS refused the operation (for example, the calling
-///   process cannot write to the table)
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
@@ -405,31 +434,5 @@ pub fn decrement_by(
   key: String,
   amount: Int,
 ) -> Result(Int, table.EtsError) {
-  case operations.get(table, key) {
-    Ok(option.Some(current)) ->
-      decrement_existing_key(table, key, current, amount)
-    Ok(option.None) -> create_new_negative_counter_key(table, key, amount)
-    Error(err) -> Error(err)
-  }
-}
-
-fn decrement_existing_key(
-  table: table.Table(String, Int),
-  key: String,
-  current: Int,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  let new_value = current - amount
-  operations.set(table, key, new_value)
-  |> result.replace(new_value)
-}
-
-fn create_new_negative_counter_key(
-  table: table.Table(String, Int),
-  key: String,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  let initial_value = 0 - amount
-  operations.set(table, key, initial_value)
-  |> result.replace(initial_value)
+  increment_by(table, key, 0 - amount)
 }

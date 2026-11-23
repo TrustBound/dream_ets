@@ -7,6 +7,7 @@
 -export([ets_new/2, ets_insert/2, ets_lookup/2, ets_take_one/2, ets_delete_table/1, ets_delete_key/2,
          ets_delete_all_objects/1, ets_first/1, ets_next/2, ets_member/2,
          ets_insert_new/2, ets_take/2, ets_update_element/3,
+         ets_update_counter/4, ets_size/1,
          ets_match/2, ets_match_object/2, ets_select/2, ets_tab2file/2, ets_file2tab/1,
          to_dynamic/1, wrap_table_ref/1, unwrap_table_ref/1]).
 
@@ -128,6 +129,38 @@ ets_update_element(TableId, Key, {Pos, Value}) ->
                 {ok, Updated}
         end
     end).
+
+%% Adds Amount to the integer value of the object stored under Key, and
+%% returns the new value, in one ETS call. When the key is not in the table,
+%% ETS first inserts Default. ETS raises badarg when the value is not an
+%% integer, or when the table is a bag or duplicate_bag table.
+ets_update_counter(TableId, Key, Amount, Default) ->
+    with_table(TableId, fun() ->
+        {ok, ets:update_counter(TableId, Key, Amount, Default)}
+    end).
+
+%% Returns the number of objects in the table, in constant time.
+%%
+%% ets:info/1 also answers for a private table of another process, which
+%% no other operation can read. For that table the result is the same
+%% refused-operation error as the other reads give.
+ets_size(TableId) ->
+    case ets:info(TableId) of
+        undefined ->
+            {error, table_not_found};
+        Info ->
+            size_if_readable(Info)
+    end.
+
+size_if_readable(Info) ->
+    Private = proplists:get_value(protection, Info) =:= private,
+    Owner = proplists:get_value(owner, Info) =:= self(),
+    case Private andalso not Owner of
+        true ->
+            {error, {invalid_operation, <<"ETS refused the operation: badarg">>}};
+        false ->
+            {ok, proplists:get_value(size, Info)}
+    end.
 
 %% Pattern matching - returns list of matches
 ets_match(TableId, Pattern) ->

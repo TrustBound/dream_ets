@@ -27,12 +27,12 @@ A standalone module that gives a type-safe interface to Erlang's ETS in-memory s
 - ✅ **Type-safe** - Keys and values are typed at compile time
 - ✅ **Result-based errors** - All operations return `Result` for explicit error handling
 - ✅ **Builder pattern** - Composable, fluent table configuration
-- ✅ **Atomic operations** - `insert_new()`, `take()` for race-free operations
+- ✅ **Atomic operations** - `insert_new()`, `take()` and the counter helpers for race-free operations
 - ✅ **Custom types** - Store any type with custom encoders (JSON, tuples, etc.)
 - ✅ **Pattern matching** - Advanced ETS queries and match specifications
 - ✅ **Table persistence** - Save/load tables to disk
 - ✅ **100% tested** - Comprehensive test coverage with verified examples
-- ✅ **Zero dependencies** - No Dream or framework requirements
+- ✅ **Few dependencies** - Only `gleam_stdlib` and `gleam_erlang`, no Dream or framework
 
 ## Installation
 
@@ -42,49 +42,41 @@ gleam add dream_ets
 
 ## Quick Start
 
-### Creating a Table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/creating_tables.gleam#L5-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#creating-a-table-"><img align="right" alt="Guide" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
+### Create a table and read a value back <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_first_table.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#create-a-table-and-read-a-value-back-"><img align="right" alt="Guide" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
 import dream_ets/operations
-import dream_ets/table
-import gleam/option
+import dream_ets/table.{type EtsError}
+import gleam/option.{type Option}
 import gleam/result
 
-pub fn create_string_table() -> Result(String, table.EtsError) {
-  // Create a table using the builder pattern
-  use cache <- result.try(
-    config.new("user_cache")
+pub fn first_table() -> Result(Option(String), EtsError) {
+  use names <- result.try(
+    config.new("user_names")
     |> config.key_string()
     |> config.value_string()
     |> config.create(),
   )
-
-  // Use it
-  use _ <- result.try(operations.set(cache, "alice", "Alice"))
-  use value <- result.try(operations.get(cache, "alice"))
-
-  case value {
-    option.Some(name) -> Ok(name)
-    option.None -> Error(table.OperationFailed("Not found"))
-  }
+  use Nil <- result.try(operations.set(names, "user:1", "Alice"))
+  operations.get(names, "user:1")
 }
 ```
 
+`first_table()` returns `Ok(Some("Alice"))`. The table lives as long as the process that created it, so a real program creates its tables in `main`. The [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md) guide shows how.
+
 ## Guides
 
-- [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md): install the package and create a first table
-- [Table configuration](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/table-configuration.md): build a table with the config builder and set its options
-- [Reading and writing](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/reading-and-writing.md): store, read, delete and list values, and run low-level queries
-- [Custom types](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/custom-types.md): store your own types with custom encoders, such as JSON
-- [Atomic operations](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/atomic-operations.md): use `insert_new` and `take` for race-free locks and queues
-- [Counters](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counters.md): count events with counter tables
-- [Persistence](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/persistence.md): save a table to disk and load it again
-- [Error handling](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/error-handling.md): handle each `EtsError` that an operation returns
+- [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md): create a table, use it from many processes, keep it alive, handle its errors and test your code
+- [Caching data in memory](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/caching.md): store your own types, expire old entries, load on a miss and set up a table for many readers
+- [Counting events](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/counting.md): count page views, spend a quota, and keep counts exact when many processes count
+- [Locks and work queues](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/locks-and-queues.md): let only one process do a job, share a queue between workers and take batches with `insert_new`, `take` and `take_all`
+- [Saving a table to disk](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/saving-to-disk.md): save a table, load it at start-up and handle the ways a load fails
+- [Settings and errors reference](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/settings-and-errors.md): every table setting with its default, every error, and the low-level functions
 
 ## API Reference
 
-The full API reference is on [HexDocs](https://hexdocs.pm/dream_ets). Each guide lists the functions it uses.
+The full API reference is on [HexDocs](https://hexdocs.pm/dream_ets). The guides show each function where a task needs it.
 
 ## Design Principles
 

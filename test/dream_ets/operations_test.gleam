@@ -44,6 +44,90 @@ pub fn tests() -> TestSuite {
         |> be_equal(Error(TableNotFound))
         |> or_fail_with("set on a deleted table should return TableNotFound")
       }),
+      it("replaces the value in a set table", fn() {
+        // Arrange
+        let result = {
+          use users <- result.try(typed_string_table(
+            "ops_set_type_set",
+            config.table_type_set(),
+          ))
+          use _ <- result.try(operations.set(users, "user:1", "Alice"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+
+          // Act
+          operations.get_all(users, "user:1")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["Bob"]))
+        |> or_fail_with("Should keep the last value")
+      }),
+      it("replaces the value in an ordered_set table", fn() {
+        // Arrange
+        let result = {
+          use users <- result.try(typed_string_table(
+            "ops_set_type_ordered",
+            config.table_type_ordered_set(),
+          ))
+          use _ <- result.try(operations.set(users, "user:1", "Alice"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+
+          // Act
+          operations.get_all(users, "user:1")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["Bob"]))
+        |> or_fail_with("Should keep the last value")
+      }),
+      it("adds a different value in a bag table", fn() {
+        // Arrange
+        let result = {
+          use users <- result.try(typed_string_table(
+            "ops_set_type_bag",
+            config.table_type_bag(),
+          ))
+          use _ <- result.try(operations.set(users, "user:1", "Alice"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+
+          // Act
+          operations.get_all(users, "user:1")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["Alice", "Bob"]))
+        |> or_fail_with("Should keep each different value once")
+      }),
+      it("adds every value in a duplicate_bag table", fn() {
+        // Arrange
+        let result = {
+          use users <- result.try(typed_string_table(
+            "ops_set_type_dup_bag",
+            config.table_type_duplicate_bag(),
+          ))
+          use _ <- result.try(operations.set(users, "user:1", "Alice"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+          use _ <- result.try(operations.set(users, "user:1", "Bob"))
+
+          // Act
+          operations.get_all(users, "user:1")
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(["Alice", "Bob", "Bob"]))
+        |> or_fail_with("Should keep every value")
+      }),
       it("returns Ok for a new key", fn() {
         // Arrange
         let result = {
@@ -449,6 +533,41 @@ pub fn tests() -> TestSuite {
         |> should
         |> be_equal(Ok(0))
         |> or_fail_with("Should count no objects")
+      }),
+      it("counts each value of a bag key", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(bag_table.two_values("ops_size_bag"))
+
+          // Act
+          operations.size(bag)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(2))
+        |> or_fail_with("Should count two objects under one key")
+      }),
+      it("counts each copy in a duplicate_bag table", fn() {
+        // Arrange
+        let result = {
+          use bag <- result.try(typed_string_table(
+            "ops_size_dup_bag",
+            config.table_type_duplicate_bag(),
+          ))
+          use _ <- result.try(operations.set(bag, "key", "same"))
+          use _ <- result.try(operations.set(bag, "key", "same"))
+
+          // Act
+          operations.size(bag)
+        }
+
+        // Assert
+        result
+        |> should
+        |> be_equal(Ok(2))
+        |> or_fail_with("Should count two copies of one object")
       }),
     ]),
     group("keys", [
@@ -2058,4 +2177,15 @@ fn small_int_decoder() -> decode.Decoder(Int) {
     True -> decode.success(number)
     False -> decode.failure(0, "SmallInt")
   }
+}
+
+fn typed_string_table(
+  name: String,
+  table_type: config.TableType,
+) -> Result(table.Table(String, String), table.EtsError) {
+  config.new(name)
+  |> config.key_string()
+  |> config.value_string()
+  |> config.table_type(table_type)
+  |> config.create()
 }
