@@ -5,7 +5,7 @@ import dream_ets/helpers
 import dream_ets/operations
 import dream_ets/table
 import dream_test/matchers.{be_equal, or_fail_with, should}
-import dream_test/types.{type TestSuite}
+import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/ets_info.{table_info}
 import gleam/dynamic
@@ -17,7 +17,7 @@ import snippets/doc_helpers
 import snippets/doc_operations
 import snippets/doc_table
 
-pub fn tests() -> TestSuite(Nil) {
+pub fn tests() -> TestSuite {
   describe("doc snippets", [
     group("encoders", [
       it("create_with_encoders stores in both tables", fn() {

@@ -2,12 +2,12 @@
 
 import dream_ets/encoders
 import dream_test/matchers.{be_equal, or_fail_with, should}
-import dream_test/types.{type TestSuite}
+import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import gleam/dynamic
 import gleam/dynamic/decode
 
-pub fn tests() -> TestSuite(Nil) {
+pub fn tests() -> TestSuite {
   describe("dream_ets/encoders", [
     group("string_encoder", [
       it("encodes a String as a dynamic String", fn() {

@@ -12,7 +12,7 @@ import dream_ets/helpers
 import dream_ets/operations
 import dream_ets/table.{DecodeError, OperationFailed, TableNotFound}
 import dream_test/matchers.{be_equal, or_fail_with, should}
-import dream_test/types.{type TestSuite}
+import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
 import fixtures/deleted_table.{deleted_string_table}
 import fixtures/guarded_table.{private_string_table, protected_string_table}
@@ -26,7 +26,7 @@ import gleam/option
 import gleam/result
 import gleam/string
 
-pub fn tests() -> TestSuite(Nil) {
+pub fn tests() -> TestSuite {
   describe("dream_ets/operations", [
     group("set", [
       it("returns TableNotFound for a deleted table", fn() {

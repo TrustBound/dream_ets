@@ -5,7 +5,7 @@
 //// Each test checks the exact result of one snippet.
 
 import dream_test/matchers.{be_equal, or_fail_with, should}
-import dream_test/types.{type TestSuite}
+import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
 import gleam/option
 import snippets/advanced_operations
@@ -25,7 +25,7 @@ import snippets/table_persistence
 import snippets/type_safe_operations
 import snippets/work_queue
 
-pub fn tests() -> TestSuite(Nil) {
+pub fn tests() -> TestSuite {
   describe("snippets", [
     it("creating tables returns the stored name", fn() {
       // Act
