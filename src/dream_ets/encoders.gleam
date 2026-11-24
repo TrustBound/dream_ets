@@ -6,21 +6,35 @@
 ////
 //// ## Quick Start
 ////
+//// ### Create tables with encoders <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L15-L40"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+////
 //// ```gleam
-//// import dream_ets/config
-//// import dream_ets/encoders
+//// pub fn create_with_encoders() -> Result(
+////   #(option.Option(String), option.Option(Int)),
+////   table.EtsError,
+//// ) {
+////   // Use convenience functions (recommended)
+////   use cache <- result.try(
+////     config.new("doc_encoders_cache")
+////     |> config.key_string()
+////     |> config.value_string()
+////     |> config.create(),
+////   )
 ////
-//// // Use convenience functions (recommended)
-//// let assert Ok(table) = config.new("cache")
-////   |> config.key_string()
-////   |> config.value_string()
-////   |> config.create()
+////   // Or use encoders directly for custom configuration
+////   use scores <- result.try(
+////     config.new("doc_encoders_scores")
+////     |> config.key(encoders.string_encoder, encoders.string_decoder())
+////     |> config.value(encoders.int_encoder, encoders.int_decoder())
+////     |> config.create(),
+////   )
 ////
-//// // Or use encoders directly for custom configuration
-//// let assert Ok(table) = config.new("scores")
-////   |> config.key(encoders.string_encoder, encoders.string_decoder())
-////   |> config.value(encoders.int_encoder, encoders.int_decoder())
-////   |> config.create()
+////   use _ <- result.try(operations.set(cache, "greeting", "hello"))
+////   use _ <- result.try(operations.set(scores, "alice", 10))
+////   use greeting <- result.try(operations.get(cache, "greeting"))
+////   use score <- result.try(operations.get(scores, "alice"))
+////   Ok(#(greeting, score))
+//// }
 //// ```
 ////
 //// ## Built-in Types
@@ -37,56 +51,74 @@
 //// For complex or custom types, you'll need to write your own encoders/decoders.
 //// Common patterns:
 ////
-//// ### JSON Encoding
+//// ### JSON Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L42-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
-//// import gleam/json
-//// import gleam/dynamic
-//// import gleam/result
-////
 //// pub type User {
 ////   User(name: String, age: Int)
 //// }
 ////
-//// fn encode_user(user: User) -> dynamic.Dynamic {
+//// pub fn encode_user(user: User) -> dynamic.Dynamic {
 ////   json.object([
 ////     #("name", json.string(user.name)),
 ////     #("age", json.int(user.age)),
 ////   ])
 ////   |> json.to_string
-////   |> dynamic.from
+////   |> dynamic.string
 //// }
 ////
-//// fn decode_user() -> decode.Decoder(User) {
-////   use json_str <- decode.string
-////   use obj <- decode.then(json.decode(json_str, decode.dynamic))
-////   decode.decode2(
-////     User,
-////     decode.field("name", decode.string),
-////     decode.field("age", decode.int),
-////   )(obj)
+//// pub fn decode_user() -> decode.Decoder(User) {
+////   use json_text <- decode.then(decode.string)
+////   case json.parse(json_text, user_from_json()) {
+////     Ok(user) -> decode.success(user)
+////     Error(_) -> decode.failure(User("", 0), "User JSON")
+////   }
+//// }
+////
+//// fn user_from_json() -> decode.Decoder(User) {
+////   use name <- decode.field("name", decode.string)
+////   use age <- decode.field("age", decode.int)
+////   decode.success(User(name: name, age: age))
+//// }
+////
+//// pub fn store_user() -> Result(option.Option(User), table.EtsError) {
+////   use users <- result.try(
+////     config.new("doc_encoders_users")
+////     |> config.key_string()
+////     |> config.value(encode_user, decode_user())
+////     |> config.create(),
+////   )
+////   use _ <- result.try(operations.set(users, "ada", User("Ada", 36)))
+////   operations.get(users, "ada")
 //// }
 //// ```
 ////
-//// ### Tuple Encoding
+//// ### Tuple Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L80-L103"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
-//// import gleam/dynamic
-////
 //// pub type Point {
 ////   Point(x: Int, y: Int)
 //// }
 ////
-//// fn encode_point(p: Point) -> dynamic.Dynamic {
-////   dynamic.from(#(p.x, p.y))
+//// pub fn encode_point(point: Point) -> dynamic.Dynamic {
+////   dynamic.array([dynamic.int(point.x), dynamic.int(point.y)])
 //// }
 ////
-//// fn decode_point() -> decode.Decoder(Point) {
-////   decode.decode2(
-////     Point,
-////     decode.element(0, decode.int),
-////     decode.element(1, decode.int),
+//// pub fn decode_point() -> decode.Decoder(Point) {
+////   use x <- decode.field(0, decode.int)
+////   use y <- decode.field(1, decode.int)
+////   decode.success(Point(x: x, y: y))
+//// }
+////
+//// pub fn store_point() -> Result(option.Option(Point), table.EtsError) {
+////   use points <- result.try(
+////     config.new("doc_encoders_points")
+////     |> config.key_string()
+////     |> config.value(encode_point, decode_point())
+////     |> config.create(),
 ////   )
+////   use _ <- result.try(operations.set(points, "origin", Point(0, 0)))
+////   operations.get(points, "origin")
 //// }
 //// ```
 
@@ -108,14 +140,19 @@ import gleam/dynamic/decode
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("cache")
-///   |> config.key(encoders.string_encoder, encoders.string_decoder())
-///   |> config.value_string()
-///   |> config.create()
+/// ```gleam
+/// pub fn string_table() -> Result(option.Option(String), table.EtsError) {
+///   use users <- result.try(
+///     config.new("doc_encoders_strings")
+///     |> config.key(encoders.string_encoder, encoders.string_decoder())
+///     |> config.value(encoders.string_encoder, encoders.string_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   operations.get(users, "user:123")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -136,14 +173,19 @@ pub fn string_encoder(s: String) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("users")
-///   |> config.key_string()
-///   |> config.value(encoders.string_encoder, encoders.string_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn string_table() -> Result(option.Option(String), table.EtsError) {
+///   use users <- result.try(
+///     config.new("doc_encoders_strings")
+///     |> config.key(encoders.string_encoder, encoders.string_decoder())
+///     |> config.value(encoders.string_encoder, encoders.string_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   operations.get(users, "user:123")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -168,15 +210,19 @@ pub fn string_decoder() -> decode.Decoder(String) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Counter table with int values
-/// let assert Ok(counter) = config.new("counts")
-///   |> config.key_string()
-///   |> config.value(encoders.int_encoder, encoders.int_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn int_table() -> Result(option.Option(Int), table.EtsError) {
+///   use scores <- result.try(
+///     config.new("doc_encoders_ints")
+///     |> config.key_string()
+///     |> config.value(encoders.int_encoder, encoders.int_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(scores, "player1", 42))
+///   operations.get(scores, "player1")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -197,14 +243,19 @@ pub fn int_encoder(i: Int) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("scores")
-///   |> config.key_string()
-///   |> config.value(encoders.int_encoder, encoders.int_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn int_table() -> Result(option.Option(Int), table.EtsError) {
+///   use scores <- result.try(
+///     config.new("doc_encoders_ints")
+///     |> config.key_string()
+///     |> config.value(encoders.int_encoder, encoders.int_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(scores, "player1", 42))
+///   operations.get(scores, "player1")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -228,15 +279,19 @@ pub fn int_decoder() -> decode.Decoder(Int) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Feature flags table
-/// let assert Ok(flags) = config.new("feature_flags")
-///   |> config.key_string()
-///   |> config.value(encoders.bool_encoder, encoders.bool_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn bool_table() -> Result(option.Option(Bool), table.EtsError) {
+///   use flags <- result.try(
+///     config.new("doc_encoders_bools")
+///     |> config.key_string()
+///     |> config.value(encoders.bool_encoder, encoders.bool_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(flags, "dark_mode", True))
+///   operations.get(flags, "dark_mode")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -256,14 +311,19 @@ pub fn bool_encoder(b: Bool) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(flags) = config.new("flags")
-///   |> config.key_string()
-///   |> config.value(encoders.bool_encoder, encoders.bool_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn bool_table() -> Result(option.Option(Bool), table.EtsError) {
+///   use flags <- result.try(
+///     config.new("doc_encoders_bools")
+///     |> config.key_string()
+///     |> config.value(encoders.bool_encoder, encoders.bool_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(flags, "dark_mode", True))
+///   operations.get(flags, "dark_mode")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -287,15 +347,19 @@ pub fn bool_decoder() -> decode.Decoder(Bool) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Prices table with float values
-/// let assert Ok(prices) = config.new("product_prices")
-///   |> config.key_string()
-///   |> config.value(encoders.float_encoder, encoders.float_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn float_table() -> Result(option.Option(Float), table.EtsError) {
+///   use prices <- result.try(
+///     config.new("doc_encoders_floats")
+///     |> config.key_string()
+///     |> config.value(encoders.float_encoder, encoders.float_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(prices, "widget", 9.99))
+///   operations.get(prices, "widget")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -315,14 +379,19 @@ pub fn float_encoder(f: Float) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(metrics) = config.new("latency")
-///   |> config.key_string()
-///   |> config.value(encoders.float_encoder, encoders.float_decoder())
-///   |> config.create()
+/// ```gleam
+/// pub fn float_table() -> Result(option.Option(Float), table.EtsError) {
+///   use prices <- result.try(
+///     config.new("doc_encoders_floats")
+///     |> config.key_string()
+///     |> config.value(encoders.float_encoder, encoders.float_decoder())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(prices, "widget", 9.99))
+///   operations.get(prices, "widget")
+/// }
 /// ```
 ///
 /// ## See Also

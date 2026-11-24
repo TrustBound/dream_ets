@@ -1,0 +1,4 @@
+cached_user_ids(cache)                           -> Ok(["user:1", "user:2"])
+entry_count(cache)                               -> Ok(2)
+forget(cache, "user:1") then entry_count(cache)  -> Ok(1)
+clear(cache) then entry_count(cache)             -> Ok(0)

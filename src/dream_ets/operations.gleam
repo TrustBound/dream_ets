@@ -5,18 +5,19 @@
 ////
 //// ## Quick Start
 ////
+//// ### Set, get and delete <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L16-L25"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+////
 //// ```gleam
-//// import dream_ets/helpers
-//// import dream_ets/operations
-//// import gleam/option
+//// pub fn crud() -> Result(option.Option(String), table.EtsError) {
+////   // Create table
+////   use cache <- result.try(helpers.new_string_table("doc_operations_crud"))
 ////
-//// // Create table
-//// let assert Ok(cache) = helpers.new_string_table("cache")
-////
-//// // Basic CRUD
-//// let assert Ok(_) = operations.set(cache, "user:123", "Alice")
-//// let assert Ok(option.Some("Alice")) = operations.get(cache, "user:123")
-//// let assert Ok(_) = operations.delete(cache, "user:123")
+////   // Basic CRUD
+////   use _ <- result.try(operations.set(cache, "user:123", "Alice"))
+////   use _ <- result.try(operations.get(cache, "user:123"))
+////   use _ <- result.try(operations.delete(cache, "user:123"))
+////   operations.get(cache, "user:123")
+//// }
 //// ```
 ////
 //// ## Operation Categories
@@ -39,7 +40,7 @@
 //// - `keys()` - Get all keys
 //// - `values()` - Get all values
 //// - `to_list()` - Get all key-value pairs
-//// - `size()` - Count entries
+//// - `size()` - Count the stored objects
 ////
 //// ### Table Management
 ////
@@ -63,14 +64,13 @@
 ////
 //// - `TableNotFound` - Table was deleted
 //// - `DecodeError` - Failed to decode value
-//// - `EncodeError` - Failed to encode value
 //// - `OperationFailed` - General operation failure
 ////
 //// ## Performance Notes
 ////
 //// - `set()`, `get()`, `delete()` - O(1) constant time
 //// - `keys()`, `values()`, `to_list()` - O(n) iterates entire table
-//// - `size()` - O(n) counts by iterating (no cached counter)
+//// - `size()` - O(1): ETS keeps the count of objects
 ////
 //// ## Concurrency
 ////
@@ -82,14 +82,23 @@ import dream_ets/internal
 import dream_ets/table
 import gleam/dynamic
 import gleam/dynamic/decode
+import gleam/int
 import gleam/list
 import gleam/option
 import gleam/result
 
 /// Insert or update a key-value pair in the table
 ///
-/// Sets a key-value pair in the table. If the key already exists, the value
-/// is updated. If the key doesn't exist, it's created.
+/// Stores a key-value pair in the table. What happens to a key that is
+/// already in the table depends on the table type:
+///
+/// - `set` and `ordered_set`: the new value replaces the old value.
+/// - `bag`: the new value is added next to the old values. A value that the
+///   key already has is not added again.
+/// - `duplicate_bag`: the new value is always added, also when the key
+///   already has the same value.
+///
+/// A key that is not in the table is added, for every table type.
 ///
 /// This operation is atomic and safe for concurrent access.
 ///
@@ -104,14 +113,22 @@ import gleam/result
 /// - `Ok(Nil)`: Successfully set the key-value pair
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### Set and replace a value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L27-L33"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(_) = ets.set(table, "user:123", "Alice")
-/// let assert Ok(_) = ets.set(table, "user:123", "Bob")  // Updates existing
+/// ```gleam
+/// pub fn set_twice(
+///   users: table.Table(String, String),
+/// ) -> Result(Nil, table.EtsError) {
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   // In a set table, this replaces the existing value
+///   operations.set(users, "user:123", "Bob")
+/// }
 /// ```
 pub fn set(
   table: table.Table(k, v),
@@ -146,17 +163,24 @@ pub fn set(
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
 /// - `Error(DecodeError(error))`: The stored value could not be decoded
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
-/// import gleam/option
+/// ### Handle each lookup result <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L35-L44"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case ets.get(table, "user:123") {
-///   Ok(option.Some(name)) -> io.println("Found: " <> name)
-///   Ok(option.None) -> io.println("User not found")
-///   Error(err) -> handle_error(err)
+/// ```gleam
+/// pub fn describe_user(
+///   users: table.Table(String, String),
+///   key: String,
+/// ) -> String {
+///   case operations.get(users, key) {
+///     Ok(option.Some(name)) -> "Found: " <> name
+///     Ok(option.None) -> "User not found"
+///     Error(error) -> "Lookup failed: " <> string.inspect(error)
+///   }
 /// }
 /// ```
 pub fn get(
@@ -167,9 +191,67 @@ pub fn get(
   let table_ref = table.table_ref(table)
 
   case internal.lookup(table_ref, encoded_key) {
-    Ok(dyn_object) -> decode_lookup_result(table, dyn_object)
-    Error(internal.NotFound) -> Ok(option.None)
-    Error(err) -> map_internal_error(err)
+    Ok([]) -> Ok(option.None)
+    Ok([dyn_object]) -> decode_lookup_result(table, dyn_object)
+    Ok(dyn_objects) ->
+      Error(several_values_error(list.length(dyn_objects), "get_all"))
+    Error(err) -> Error(ffi_error_to_ets_error(err))
+  }
+}
+
+/// Get every value stored under a key
+///
+/// A set or ordered_set table has at most one value for a key. A bag or
+/// duplicate_bag table can have more. This function returns all of them, for
+/// every table type.
+///
+/// ## Parameters
+///
+/// - `table`: The table to query
+/// - `key`: The key to look up
+///
+/// ## Returns
+///
+/// `Ok(values)`: the values of the key. The list is empty when the key is
+/// not in the table.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `DecodeError(error)`: A stored value could not be decoded
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
+///
+/// ## Example
+///
+/// ### Read every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L256-L263"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn tags_of_post(
+///   tags: table.Table(String, String),
+/// ) -> Result(List(String), table.EtsError) {
+///   // `tags` is a bag table, so one key can have several values
+///   use _ <- result.try(operations.set(tags, "post-1", "gleam"))
+///   use _ <- result.try(operations.set(tags, "post-1", "erlang"))
+///   operations.get_all(tags, "post-1")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `get()` - Read the one value of a key
+/// - `take_all()` - Read and remove every value of a key
+pub fn get_all(
+  table: table.Table(k, v),
+  key: k,
+) -> Result(List(v), table.EtsError) {
+  let encoded_key = table.encode_key(table, key)
+  let table_ref = table.table_ref(table)
+
+  case internal.lookup(table_ref, encoded_key) {
+    Ok(dyn_objects) -> decode_objects(table, dyn_objects)
+    Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
 
@@ -190,13 +272,20 @@ pub fn get(
 /// - `Ok(Nil)`: Successfully deleted (or key didn't exist)
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### Delete a key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L46-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(_) = ets.delete(table, "user:123")
+/// ```gleam
+/// pub fn remove_user(
+///   users: table.Table(String, String),
+/// ) -> Result(Nil, table.EtsError) {
+///   operations.delete(users, "user:123")
+/// }
 /// ```
 pub fn delete(table: table.Table(k, v), key: k) -> Result(Nil, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
@@ -223,10 +312,13 @@ pub fn delete(table: table.Table(k, v), key: k) -> Result(Nil, table.EtsError) {
 /// - `Ok(False)`: Key doesn't exist
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
-/// ### Check whether a user exists <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/doc_member.gleam#L11-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Check whether a user exists <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_member.gleam#L11-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn describe_user(
@@ -276,13 +368,20 @@ pub fn member(
 /// - `Ok(Nil)`: Successfully deleted
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   already deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process does not own the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### Delete a table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L52-L56"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(_) = ets.delete_table(table)
+/// ```gleam
+/// pub fn drop_table(
+///   users: table.Table(String, String),
+/// ) -> Result(Nil, table.EtsError) {
+///   operations.delete_table(users)
+/// }
 /// ```
 pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
   let table_ref = table.table_ref(table)
@@ -292,7 +391,13 @@ pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
 
 /// Get the number of objects in the table
 ///
-/// Returns the total number of key-value pairs in the table.
+/// Returns the number of objects stored in the table. In a `set` or
+/// `ordered_set` table, that is the number of keys. In a `bag` or
+/// `duplicate_bag` table, each value of a key counts, so a key with two values
+/// counts as 2.
+///
+/// The count comes from the table information of ETS (`ets:info`), in
+/// constant time. It does not walk the table.
 ///
 /// ## Parameters
 ///
@@ -300,60 +405,33 @@ pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
 ///
 /// ## Returns
 ///
-/// - `Ok(Int)`: The number of entries in the table (>= 0)
+/// - `Ok(Int)`: The number of objects in the table (>= 0)
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
-/// - `Error(DecodeError)`: A key failed to decode during iteration
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   is a private table of another process, which the calling process cannot
+///   read
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/operations
-/// import gleam/int
-/// import gleam/io
+/// ### Show the table size <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L58-L63"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case operations.size(table) {
-///   Ok(count) -> io.println("Table has " <> int.to_string(count) <> " entries")
-///   Error(err) -> handle_error(err)
+/// ```gleam
+/// pub fn describe_size(users: table.Table(String, String)) -> String {
+///   case operations.size(users) {
+///     Ok(count) -> "Table has " <> int.to_string(count) <> " entries"
+///     Error(error) -> "Size failed: " <> string.inspect(error)
+///   }
 /// }
-/// ```
-///
-/// ## Performance Warning
-///
-/// **This function is O(n)** - it iterates through all keys to count them.
-/// For large tables (>10,000 entries), this can be slow.
-///
-/// ### Better Alternatives for Large Tables
-///
-/// If you need frequent size checks on large tables, maintain a counter:
-///
-/// ```gleam
-/// import dream_ets/helpers
-/// import dream_ets/operations
-///
-/// // Separate counter for table size
-/// let assert Ok(stats) = helpers.new_counter("cache_stats")
-///
-/// // Increment on insert
-/// let assert Ok(_) = operations.set(cache, key, value)
-/// let assert Ok(_) = helpers.increment(stats, "size")
-///
-/// // Decrement on delete
-/// let assert Ok(_) = operations.delete(cache, key)
-/// let assert Ok(_) = helpers.decrement(stats, "size")
-///
-/// // Fast O(1) size lookup
-/// let assert Ok(option.Some(size)) = operations.get(stats, "size")
 /// ```
 ///
 /// ## See Also
 ///
-/// - `keys()` - If you need the keys anyway
+/// - `keys()` - If you need the keys
 /// - `member()` - Check single key existence (O(1))
 pub fn size(table: table.Table(k, v)) -> Result(Int, table.EtsError) {
-  // Simple implementation: count the keys
-  use all_keys <- result.try(keys(table))
-  Ok(list.length(all_keys))
+  internal.size(table.table_ref(table))
+  |> result.map_error(ffi_error_to_ets_error)
 }
 
 /// Get all keys from the table
@@ -373,17 +451,20 @@ pub fn size(table: table.Table(k, v)) -> Result(Int, table.EtsError) {
 ///
 /// - `Ok(List)`: All keys successfully decoded
 /// - `Error(DecodeError)`: A key failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### List the keys <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L65-L70"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case ets.keys(table) {
-///   Ok(all_keys) -> list.each(all_keys, fn(key) {
-///     io.println("Key: " <> key)
-///   })
-///   Error(err) -> handle_corruption(err)
+/// ```gleam
+/// pub fn list_keys(users: table.Table(String, String)) -> List(String) {
+///   case operations.keys(users) {
+///     Ok(all_keys) -> list.map(all_keys, fn(key) { "Key: " <> key })
+///     Error(error) -> ["Keys failed: " <> string.inspect(error)]
+///   }
 /// }
 /// ```
 pub fn keys(table: table.Table(k, v)) -> Result(List(k), table.EtsError) {
@@ -408,15 +489,21 @@ pub fn keys(table: table.Table(k, v)) -> Result(List(k), table.EtsError) {
 ///
 /// - `Ok(List)`: All values successfully decoded
 /// - `Error(DecodeError)`: A value failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### Use every value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L72-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case ets.values(table) {
-///   Ok(all_values) -> list.each(all_values, process_value)
-///   Error(err) -> handle_corruption(err)
+/// ```gleam
+/// pub fn count_characters(users: table.Table(String, String)) -> Int {
+///   case operations.values(users) {
+///     Ok(all_values) ->
+///       list.fold(all_values, 0, fn(total, value) { total + string.length(value) })
+///     Error(_) -> 0
+///   }
 /// }
 /// ```
 pub fn values(table: table.Table(k, v)) -> Result(List(v), table.EtsError) {
@@ -440,17 +527,20 @@ pub fn values(table: table.Table(k, v)) -> Result(List(v), table.EtsError) {
 ///
 /// - `Ok(List)`: All key-value pairs successfully decoded
 /// - `Error(DecodeError)`: A key or value failed to decode (data corruption or encoder mismatch)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot read the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets as ets
+/// ### List the pairs <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L80-L85"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case ets.to_list(table) {
-///   Ok(pairs) -> list.each(pairs, fn(#(key, value)) {
-///     io.println(key <> " => " <> value)
-///   })
-///   Error(err) -> handle_corruption(err)
+/// ```gleam
+/// pub fn list_pairs(users: table.Table(String, String)) -> List(String) {
+///   case operations.to_list(users) {
+///     Ok(pairs) -> list.map(pairs, fn(pair) { pair.0 <> " => " <> pair.1 })
+///     Error(error) -> ["List failed: " <> string.inspect(error)]
+///   }
 /// }
 /// ```
 pub fn to_list(
@@ -478,48 +568,61 @@ pub fn to_list(
 /// - `Ok(False)`: Key already existed, no change made
 /// - `Error(TableNotFound)`: The table does not exist (for example, it was
 ///   deleted)
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/operations
+/// ### Create a user once <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L87-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case operations.insert_new(table, "user:123", "Alice") {
-///   Ok(True) -> io.println("User created")
-///   Ok(False) -> io.println("User already exists")
-///   Error(error) -> handle_error(error)
+/// ```gleam
+/// pub fn create_user(users: table.Table(String, String)) -> String {
+///   case operations.insert_new(users, "user:123", "Alice") {
+///     Ok(True) -> "User created"
+///     Ok(False) -> "User already exists"
+///     Error(error) -> "Insert failed: " <> string.inspect(error)
+///   }
 /// }
 /// ```
 ///
 /// ## Use Cases
 ///
-/// ### Preventing Duplicate Registrations
+/// ### Preventing Duplicate Registrations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L95-L105"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
-/// fn register_user(users, user_id, name) {
+/// pub fn register_user(
+///   users: table.Table(String, String),
+///   user_id: String,
+///   name: String,
+/// ) -> Result(String, String) {
 ///   case operations.insert_new(users, user_id, name) {
 ///     Ok(True) -> Ok("User registered")
 ///     Ok(False) -> Error("User ID already taken")
-///     Error(error) -> Error("Database error")
+///     Error(error) -> Error("Database error: " <> string.inspect(error))
 ///   }
 /// }
 /// ```
 ///
-/// ### Distributed Locks
+/// ### Distributed Locks <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L107-L117"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
-/// fn acquire_lock(locks, resource_id, owner_id) {
+/// pub fn acquire_lock(
+///   locks: table.Table(String, String),
+///   resource_id: String,
+///   owner_id: String,
+/// ) -> Result(String, String) {
 ///   case operations.insert_new(locks, resource_id, owner_id) {
 ///     Ok(True) -> Ok("Lock acquired")
 ///     Ok(False) -> Error("Resource locked by another process")
-///     Error(error) -> Error("Lock system error")
+///     Error(error) -> Error("Lock system error: " <> string.inspect(error))
 ///   }
 /// }
 /// ```
 ///
 /// ## Why Not Use `member()` + `set()`?
 ///
-/// ### Member and set, compared with insert_new <a href="https://github.com/TrustBound/dream/blob/dream_ets-3.0.0/modules/ets/test/snippets/doc_insert_new_race.gleam#L10-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Member and set, compared with insert_new <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_insert_new_race.gleam#L10-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// // Race condition: another process can insert the key between the two calls
@@ -578,92 +681,96 @@ pub fn insert_new(
 /// - `Ok(Some(value))`: Key existed, returns the value (now removed from table)
 /// - `Ok(None)`: Key didn't exist (table unchanged)
 /// - `Error(EtsError)`: An error occurred during retrieval or deletion
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table)
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/operations
-/// import gleam/option
+/// ### Take a job <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L119-L126"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// case operations.take(table, "job:123") {
-///   Ok(option.Some(job)) -> {
-///     process_job(job)
-///     // Job is now removed from queue
+/// ```gleam
+/// pub fn take_job(jobs: table.Table(String, String)) -> String {
+///   case operations.take(jobs, "job:123") {
+///     // The job is now removed from the queue
+///     Ok(option.Some(job)) -> "Processing " <> job
+///     Ok(option.None) -> "Job not found"
+///     Error(error) -> "Take failed: " <> string.inspect(error)
 ///   }
-///   Ok(option.None) -> io.println("Job not found")
-///   Error(error) -> handle_error(error)
 /// }
 /// ```
 ///
 /// ## Use Cases
 ///
-/// ### Work Queue
+/// ### Work Queue <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L128-L139"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
-/// import dream_ets/operations
-/// import gleam/option
-///
-/// fn claim_next_job(queue, worker_id) {
+/// pub fn claim_next_job(
+///   queue: table.Table(String, String),
+///   worker_id: String,
+/// ) -> String {
 ///   case operations.take(queue, "next_job") {
-///     Ok(option.Some(job)) -> {
-///       // Atomically claimed the job
-///       process_job(job, worker_id)
-///     }
-///     Ok(option.None) -> {
-///       // No jobs available
-///       wait_for_jobs()
-///     }
-///     Error(error) -> handle_error(error)
+///     // This worker claimed the job atomically
+///     Ok(option.Some(job)) -> worker_id <> " claimed " <> job
+///     // No jobs available
+///     Ok(option.None) -> worker_id <> " found no job"
+///     Error(error) -> "Queue error: " <> string.inspect(error)
 ///   }
 /// }
 /// ```
 ///
-/// ### Cache Eviction
+/// ### Cache Eviction <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L141-L150"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
-/// fn evict_entry(cache, key) {
+/// pub fn evict_entry(
+///   cache: table.Table(String, String),
+///   key: String,
+/// ) -> Result(String, String) {
 ///   case operations.take(cache, key) {
-///     Ok(option.Some(old_value)) -> {
-///       log_eviction(key, old_value)
-///       Ok(old_value)
-///     }
+///     Ok(option.Some(old_value)) -> Ok(old_value)
 ///     Ok(option.None) -> Error("Key not in cache")
-///     Error(error) -> Error("Cache error")
+///     Error(error) -> Error("Cache error: " <> string.inspect(error))
 ///   }
 /// }
 /// ```
 ///
-/// ### Token Consumption
+/// ### Token Consumption <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L152-L162"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
-/// fn use_token(tokens, token_id) {
+/// pub fn use_token(
+///   tokens: table.Table(String, String),
+///   token_id: String,
+/// ) -> Result(String, String) {
 ///   case operations.take(tokens, token_id) {
-///     Ok(option.Some(token_data)) -> {
-///       // Token can only be used once
-///       Ok(token_data)
-///     }
+///     // A token can be used only once
+///     Ok(option.Some(token_data)) -> Ok(token_data)
 ///     Ok(option.None) -> Error("Invalid or already used token")
-///     Error(error) -> Error("Token system error")
+///     Error(error) -> Error("Token system error: " <> string.inspect(error))
 ///   }
 /// }
 /// ```
 ///
 /// ## Why Not Use `get()` + `delete()`?
 ///
+/// ### get and delete, compared with take <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L164-L180"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// // ❌ RACE CONDITION - Value might change between get and delete
-/// case operations.get(table, key) {
-///   Ok(option.Some(value)) -> {
-///     operations.delete(table, key)  // Another process might have changed it!
-///     value
-///   }
-///   _ -> panic
+/// // Race condition: another process can change the value between get and delete
+/// pub fn get_then_delete(
+///   cache: table.Table(String, String),
+///   key: String,
+/// ) -> Result(option.Option(String), table.EtsError) {
+///   use value <- result.try(operations.get(cache, key))
+///   use _ <- result.try(operations.delete(cache, key))
+///   Ok(value)
 /// }
 ///
-/// // ✅ ATOMIC - Get and delete in one operation
-/// case operations.take(table, key) {
-///   Ok(option.Some(value)) -> value
-///   _ -> panic
+/// // Atomic: get and delete in one operation
+/// pub fn take_value(
+///   cache: table.Table(String, String),
+///   key: String,
+/// ) -> Result(option.Option(String), table.EtsError) {
+///   operations.take(cache, key)
 /// }
 /// ```
 ///
@@ -679,31 +786,169 @@ pub fn take(
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.take(table_ref, encoded_key) {
-    Ok(dyn_object) -> decode_take_result(table, dyn_object)
-    Error(internal.NotFound) -> Ok(option.None)
-    Error(err) -> map_internal_error(err)
+  case internal.take_one(table_ref, encoded_key) {
+    Ok([dyn_object]) -> decode_take_result(table, dyn_object)
+    Ok(_no_object) -> Ok(option.None)
+    Error(internal.SeveralObjects(count)) ->
+      Error(several_values_error(count, "take_all"))
+    Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
 
-/// Update an element in a tuple at the specified position
+/// Read and remove every value stored under a key
+///
+/// The read and the removal are one ETS operation, for every table type.
+///
+/// ## Parameters
+///
+/// - `table`: The table to take from
+/// - `key`: The key to take
+///
+/// ## Returns
+///
+/// `Ok(values)`: the values that were removed. The list is empty when the
+/// key is not in the table.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `DecodeError(error)`: A stored value could not be decoded. The values
+///   are removed.
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table)
+///
+/// ## Example
+///
+/// ### Remove every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L265-L270"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn remove_tags(
+///   tags: table.Table(String, String),
+/// ) -> Result(List(String), table.EtsError) {
+///   // Read and remove every value of the key in one operation
+///   operations.take_all(tags, "post-1")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `take()` - Read and remove the one value of a key
+/// - `get_all()` - Read every value of a key
+pub fn take_all(
+  table: table.Table(k, v),
+  key: k,
+) -> Result(List(v), table.EtsError) {
+  let encoded_key = table.encode_key(table, key)
+  let table_ref = table.table_ref(table)
+
+  case internal.take(table_ref, encoded_key) {
+    Ok(dyn_objects) -> decode_objects(table, dyn_objects)
+    Error(err) -> Error(ffi_error_to_ets_error(err))
+  }
+}
+
+/// Replace one element of the object stored under a key
+///
+/// Changes the element at position `pos` of the stored object in place. The
+/// object of a table is `{key, value}`, so position 2 is the value. The new
+/// element is a `Dynamic`, so the decoder of the table must be able to read it.
+/// This is a low-level function. Most code uses `set` instead.
+///
+/// ## Parameters
+///
+/// - `table`: The table to update
+/// - `key`: The key of the object
+/// - `pos`: The 1-based position of the element to replace
+/// - `value`: The new element
+///
+/// ## Returns
+///
+/// - `Ok(True)`: the element was replaced
+/// - `Ok(False)`: the key is not in the table, and nothing changed
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist, or no object has this key
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table, or `pos` is not a position of the object)
+///
+/// ## Example
+///
+/// ### Replace a value in place <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L182-L194"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn replace_value(
+///   users: table.Table(String, String),
+/// ) -> Result(option.Option(String), table.EtsError) {
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   // Position 2 is the value in the {key, value} object
+///   use _ <- result.try(operations.update_element(
+///     users,
+///     "user:123",
+///     2,
+///     dynamic.string("Bob"),
+///   ))
+///   operations.get(users, "user:123")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `set()` - Store a whole value
+/// - [ets:update_element/3](https://www.erlang.org/doc/apps/stdlib/ets.html#update_element/3)
 pub fn update_element(
   table: table.Table(k, v),
   key: k,
   pos: Int,
   value: dynamic.Dynamic,
-) -> Result(Nil, table.EtsError) {
+) -> Result(Bool, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.update_element(table_ref, encoded_key, pos, value) {
-    Ok(_) -> Ok(Nil)
-    Error(internal.NotFound) -> Error(table.TableNotFound)
-    Error(error) -> Error(ffi_error_to_ets_error(error))
-  }
+  internal.update_element(table_ref, encoded_key, pos, value)
+  |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Delete all objects from the table (keeps the table)
+/// Delete every object from the table
+///
+/// Removes all objects and keeps the table, so you can use it again.
+///
+/// ## Parameters
+///
+/// - `table`: The table to clear
+///
+/// ## Returns
+///
+/// `Ok(Nil)` when the table is empty.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   write to the table)
+///
+/// ## Example
+///
+/// ### Clear a cache <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L196-L203"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn clear_cache(
+///   cache: table.Table(String, String),
+/// ) -> Result(Int, table.EtsError) {
+///   use _ <- result.try(operations.set(cache, "a", "1"))
+///   use _ <- result.try(operations.delete_all_objects(cache))
+///   // The table still exists, and it is empty
+///   operations.size(cache)
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `delete()` - Delete one key
+/// - `delete_table()` - Delete the whole table
 pub fn delete_all_objects(
   table: table.Table(k, v),
 ) -> Result(Nil, table.EtsError) {
@@ -712,14 +957,50 @@ pub fn delete_all_objects(
   |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Pattern matching - advanced ETS feature
+/// Find the objects that match an Erlang match pattern
 ///
-/// Returns `Ok` with the list of matches based on Erlang match pattern, or
-/// `Error(TableNotFound)` if the table does not exist (for example, it was
-/// deleted).
-/// This is a low-level function - most users should use get/keys/values instead.
+/// Returns the bound variables (`'$1'`, `'$2'`, ...) of each matching object,
+/// as one list for each object. This is a low-level function. Most code uses
+/// `get`, `keys` or `values` instead.
 ///
-/// See: https://erlang.org/doc/man/ets.html#match-2
+/// ## Parameters
+///
+/// - `table`: The table to search
+/// - `pattern`: An Erlang match pattern as a `Dynamic`
+///
+/// ## Returns
+///
+/// `Ok` with the bound variables of each matching object.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
+///
+/// ## Example
+///
+/// ### Bind the key and the value of each object <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L205-L215"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn match_pairs(
+///   users: table.Table(String, String),
+/// ) -> Result(List(dynamic.Dynamic), table.EtsError) {
+///   // The pattern {'$1', '$2'} binds the key and the value of each object
+///   let pattern =
+///     dynamic.array([
+///       atom.to_dynamic(atom.create("$1")),
+///       atom.to_dynamic(atom.create("$2")),
+///     ])
+///   operations.match(users, pattern)
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `match_object()` - Return the whole objects
+/// - [ets:match/2](https://www.erlang.org/doc/apps/stdlib/ets.html#match/2)
 pub fn match(
   table: table.Table(k, v),
   pattern: dynamic.Dynamic,
@@ -729,14 +1010,46 @@ pub fn match(
   |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Match objects - advanced ETS feature
+/// Find the whole objects that match an Erlang match pattern
 ///
-/// Returns `Ok` with the complete objects matching the pattern, or
-/// `Error(TableNotFound)` if the table does not exist (for example, it was
-/// deleted).
-/// This is a low-level function - most users should use get/to_list instead.
+/// Returns each matching `{key, value}` object. This is a low-level function.
+/// Most code uses `get` or `to_list` instead.
 ///
-/// See: https://erlang.org/doc/man/ets.html#match_object-2
+/// ## Parameters
+///
+/// - `table`: The table to search
+/// - `pattern`: An Erlang match pattern as a `Dynamic`
+///
+/// ## Returns
+///
+/// `Ok` with each matching object.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table)
+///
+/// ## Example
+///
+/// ### Find the objects with one value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L217-L224"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn match_alice(
+///   users: table.Table(String, String),
+/// ) -> Result(List(dynamic.Dynamic), table.EtsError) {
+///   // The pattern {'_', <<"Alice">>} matches every object with the value Alice
+///   let pattern =
+///     dynamic.array([atom.to_dynamic(atom.create("_")), dynamic.string("Alice")])
+///   operations.match_object(users, pattern)
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `match()` - Return only the bound variables
+/// - [ets:match_object/2](https://www.erlang.org/doc/apps/stdlib/ets.html#match_object/2)
 pub fn match_object(
   table: table.Table(k, v),
   pattern: dynamic.Dynamic,
@@ -746,14 +1059,55 @@ pub fn match_object(
   |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Select with match specification - advanced ETS feature
+/// Query the table with an Erlang match specification
 ///
-/// SQL-like queries with match specifications. Returns `Ok` with the
-/// results, or `Error(TableNotFound)` if the table does not exist (for
-/// example, it was deleted).
+/// Returns the result of the match specification for each matching object.
 /// This is a low-level function for complex queries.
 ///
-/// See: https://erlang.org/doc/man/ets.html#select-2
+/// ## Parameters
+///
+/// - `table`: The table to query
+/// - `match_spec`: An Erlang match specification as a `Dynamic`
+///
+/// ## Returns
+///
+/// `Ok` with the results of the match specification.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed("ETS refused the operation: badarg")`: The table exists,
+///   but ETS refused the operation (for example, the calling process cannot
+///   read the table, or the match specification is not valid)
+///
+/// ## Example
+///
+/// ### Select every value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L226-L242"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn select_values(
+///   users: table.Table(String, String),
+/// ) -> Result(List(dynamic.Dynamic), table.EtsError) {
+///   // [{{'$1', '$2'}, [], ['$2']}] returns the value of each object
+///   let match_spec =
+///     dynamic.list([
+///       dynamic.array([
+///         dynamic.array([
+///           atom.to_dynamic(atom.create("$1")),
+///           atom.to_dynamic(atom.create("$2")),
+///         ]),
+///         dynamic.list([]),
+///         dynamic.list([atom.to_dynamic(atom.create("$2"))]),
+///       ]),
+///     ])
+///   operations.select(users, match_spec)
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `match()` - Use a match pattern
+/// - [ets:select/2](https://www.erlang.org/doc/apps/stdlib/ets.html#select/2)
 pub fn select(
   table: table.Table(k, v),
   match_spec: dynamic.Dynamic,
@@ -763,50 +1117,113 @@ pub fn select(
   |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Save table to file
+/// Save the table to a file
 ///
-/// Persists the entire table to disk. Useful for caching across restarts.
+/// Writes every object of the table to `filename` with `ets:tab2file/2`. Load
+/// the file again with `load_from_file`.
+///
+/// ## Parameters
+///
+/// - `table`: The table to save
+/// - `filename`: The path of the file to write
+///
+/// ## Returns
+///
+/// `Ok(Nil)` when the file is written.
+///
+/// ## Errors
+///
+/// - `TableNotFound`: The table does not exist (for example, it was deleted)
+/// - `OperationFailed(reason)`: The file could not be written, or the calling
+///   process cannot read the table. The reason is the Erlang error, for example
+///   `{file_error,"/missing/table.ets",enoent}`
+///
+/// ## Example
+///
+/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn save_and_load(
+///   users: table.Table(String, String),
+///   filename: String,
+/// ) -> Result(option.Option(String), table.EtsError) {
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   use _ <- result.try(operations.save_to_file(users, filename))
+///   use _ <- result.try(operations.delete_table(users))
+///   use _ <- result.try(operations.load_from_file(filename))
+///   // The loaded table has the same name, so `users` finds it again
+///   operations.get(users, "user:123")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `load_from_file()` - Load the file again
 pub fn save_to_file(
   table: table.Table(k, v),
   filename: String,
 ) -> Result(Nil, table.EtsError) {
   let table_ref = table.table_ref(table)
-  case internal.tab2file(table_ref, filename) {
-    Ok(_) -> Ok(Nil)
-    Error(err) -> map_ffi_error_to_ets_error(err)
-  }
+  internal.tab2file(table_ref, filename)
+  |> result.map_error(ffi_error_to_ets_error)
 }
 
-/// Load table from file
+/// Load a table from a file
 ///
-/// Note: This returns a raw table reference without type information.
-/// Advanced usage only - prefer creating tables with the builder.
+/// Creates the table that `save_to_file` wrote, with the same name and the same
+/// objects. It returns a raw table reference without type information. A named
+/// table is found by its name, so a `Table` value that you made for that name
+/// reads the loaded table.
+///
+/// ## Parameters
+///
+/// - `filename`: The path of the file to read
+///
+/// ## Returns
+///
+/// `Ok` with the reference of the loaded table.
+///
+/// ## Errors
+///
+/// - `OperationFailed(reason)`: The file could not be read, or a table with
+///   the same name exists (`cannot_create_table`). The reason is the Erlang error.
+///
+/// ## Example
+///
+/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn save_and_load(
+///   users: table.Table(String, String),
+///   filename: String,
+/// ) -> Result(option.Option(String), table.EtsError) {
+///   use _ <- result.try(operations.set(users, "user:123", "Alice"))
+///   use _ <- result.try(operations.save_to_file(users, filename))
+///   use _ <- result.try(operations.delete_table(users))
+///   use _ <- result.try(operations.load_from_file(filename))
+///   // The loaded table has the same name, so `users` finds it again
+///   operations.get(users, "user:123")
+/// }
+/// ```
+///
+/// ## See Also
+///
+/// - `save_to_file()` - Write the file
 pub fn load_from_file(
   filename: String,
 ) -> Result(internal.EtsTableRef, table.EtsError) {
-  case internal.file2tab(filename) {
-    Ok(table_ref) -> Ok(table_ref)
-    Error(err) -> map_ffi_error_to_ets_error(err)
-  }
+  internal.file2tab(filename)
+  |> result.map_error(ffi_error_to_ets_error)
 }
 
-fn map_ffi_error_to_ets_error(
-  err: internal.EtsFfiError,
-) -> Result(a, table.EtsError) {
-  Error(ffi_error_to_ets_error(err))
-}
-
-/// Converts an FFI error to the public `EtsError`. `NotFound` (no such key)
-/// and `TableNotFound` both become `TableNotFound`; the functions that treat
-/// a missing key as `Ok(None)` match `NotFound` before they call this.
+/// Converts an FFI error to the public `EtsError`. Each caller first handles
+/// the FFI errors that have a meaning of their own for it (`SeveralObjects`,
+/// `EmptyTable`, `EndOfTable`), so only `TableNotFound` and
+/// `InvalidOperation` arrive here.
 fn ffi_error_to_ets_error(error: internal.EtsFfiError) -> table.EtsError {
   case error {
-    internal.NotFound -> table.TableNotFound
-    internal.TableNotFound -> table.TableNotFound
-    internal.AlreadyExists -> table.TableAlreadyExists
     internal.InvalidOperation(message) -> table.OperationFailed(message)
-    internal.EmptyTable -> table.EmptyTable
-    internal.EndOfTable -> table.EndOfTable
+    _ -> table.TableNotFound
   }
 }
 
@@ -832,6 +1249,25 @@ fn decode_take_result(
   }
 }
 
+// The values of the objects of one key, in ETS order.
+fn decode_objects(
+  table: table.Table(k, v),
+  dyn_objects: List(dynamic.Dynamic),
+) -> Result(List(v), table.EtsError) {
+  list.try_map(dyn_objects, fn(dyn_object) {
+    use dyn_value <- result.try(extract_value_from_tuple(table, dyn_object))
+    table.decode_value(table, dyn_value)
+    |> result.map_error(table.DecodeError)
+  })
+}
+
+// The error of `get` and `take` for a key with more than one value.
+fn several_values_error(count: Int, function: String) -> table.EtsError {
+  table.OperationFailed(
+    "the key has " <> int.to_string(count) <> " values, use " <> function,
+  )
+}
+
 fn extract_value_from_tuple(
   _table: table.Table(k, v),
   dyn_object: dynamic.Dynamic,
@@ -839,20 +1275,17 @@ fn extract_value_from_tuple(
   // ETS returns tuples as {Key, Value} in Erlang
   // When decoded through Dynamic, we need to extract the second element (index 1)
   // Use decode.at to access tuple elements
-  case decode.run(dyn_object, decode.at([1], decode.dynamic)) {
-    Ok(dyn_value) -> Ok(dyn_value)
-    Error(errors) -> {
-      case list.first(errors) {
-        Ok(error) -> Error(table.DecodeError(error))
-        Error(_) ->
-          Error(
-            table.DecodeError(
-              decode.DecodeError("tuple", "failed to extract value", []),
-            ),
-          )
-      }
-    }
-  }
+  decode.run(dyn_object, decode.at([1], decode.dynamic))
+  |> result.map_error(first_decode_error)
+}
+
+/// A failed decode always reports at least one error. The fallback value
+/// only makes the function total.
+fn first_decode_error(errors: List(decode.DecodeError)) -> table.EtsError {
+  errors
+  |> list.first
+  |> result.unwrap(decode.DecodeError("tuple", "failed to extract value", []))
+  |> table.DecodeError
 }
 
 fn decode_value_to_option(
@@ -865,21 +1298,6 @@ fn decode_value_to_option(
   }
 }
 
-fn map_internal_error(
-  err: internal.EtsFfiError,
-) -> Result(option.Option(v), table.EtsError) {
-  case err {
-    internal.NotFound -> Ok(option.None)
-    _ -> Error(ffi_error_to_ets_error(err))
-  }
-}
-
-fn map_internal_error_to_ets(
-  err: internal.EtsFfiError,
-) -> Result(a, table.EtsError) {
-  Error(ffi_error_to_ets_error(err))
-}
-
 fn collect_all_keys(
   table: table.Table(k, v),
   table_ref: internal.EtsTableRef,
@@ -888,8 +1306,7 @@ fn collect_all_keys(
     Ok(first_dyn_key) ->
       collect_keys_from_first(table, table_ref, first_dyn_key)
     Error(internal.EmptyTable) -> Ok([])
-    Error(internal.EndOfTable) -> Ok([])
-    Error(err) -> map_internal_error_to_ets(err)
+    Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
 
@@ -912,7 +1329,14 @@ fn collect_remaining_keys(
   acc: List(k),
 ) -> Result(List(k), table.EtsError) {
   case internal.next_key(table_ref, current_dyn_key) {
-    Ok(next_dyn_key) -> {
+    Error(internal.EndOfTable) -> Ok(list.reverse(acc))
+    // Another error comes only when a second process deletes the table
+    // during the walk.
+    next -> {
+      use next_dyn_key <- result.try(result.map_error(
+        next,
+        ffi_error_to_ets_error,
+      ))
       case table.decode_key(table, next_dyn_key) {
         Ok(next_key) ->
           collect_remaining_keys(table, table_ref, next_dyn_key, [
@@ -922,8 +1346,6 @@ fn collect_remaining_keys(
         Error(decode_err) -> Error(table.DecodeError(decode_err))
       }
     }
-    Error(internal.EndOfTable) -> Ok(acc)
-    Error(err) -> map_internal_error_to_ets(err)
   }
 }
 
@@ -943,13 +1365,18 @@ fn collect_values_for_keys(
   case keys {
     [] -> Ok(list.reverse(acc))
     [key, ..rest] -> {
-      use value <- result.try(get(table, key))
-      case value {
-        option.Some(v) -> collect_values_for_keys(table, rest, [v, ..acc])
-        option.None ->
+      use values <- result.try(get_all(table, key))
+      case values {
+        [] ->
           Error(table.OperationFailed(
             "Key disappeared during iteration (concurrent delete?)",
           ))
+        _ ->
+          collect_values_for_keys(
+            table,
+            rest,
+            list.append(list.reverse(values), acc),
+          )
       }
     }
   }
@@ -971,14 +1398,18 @@ fn collect_pairs_for_keys(
   case keys {
     [] -> Ok(list.reverse(acc))
     [key, ..rest] -> {
-      use value <- result.try(get(table, key))
-      case value {
-        option.Some(v) ->
-          collect_pairs_for_keys(table, rest, [#(key, v), ..acc])
-        option.None ->
+      use values <- result.try(get_all(table, key))
+      case values {
+        [] ->
           Error(table.OperationFailed(
             "Key disappeared during iteration (concurrent delete?)",
           ))
+        _ ->
+          collect_pairs_for_keys(
+            table,
+            rest,
+            list.fold(values, acc, fn(pairs, value) { [#(key, value), ..pairs] }),
+          )
       }
     }
   }

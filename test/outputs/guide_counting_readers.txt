@@ -1,0 +1,2 @@
+views_of(views, "/pricing")  -> Ok(0)
+report(views)                -> Ok([#("/", 2), #("/about", 1)])

@@ -1,0 +1,5 @@
+try_lock(locks, "report:42", "worker:1")  -> Ok(True)
+try_lock(locks, "report:42", "worker:2")  -> Ok(False)
+unlock(locks, "report:42", "worker:2")    -> Ok(False)
+unlock(locks, "report:42", "worker:1")    -> Ok(True)
+is_locked(locks, "report:42")             -> Ok(False)

@@ -6,15 +6,19 @@
 ////
 //// ## Quick Start
 ////
+//// ### Count views and cache users <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L12-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+////
 //// ```gleam
-//// import dream_ets/helpers
+//// pub fn quick_start() -> Result(#(Int, String), table.EtsError) {
+////   // Create a counter table
+////   use counter <- result.try(helpers.new_counter("doc_helpers_page_views"))
+////   use count <- result.try(helpers.increment(counter, "homepage"))
 ////
-//// // Create a counter table
-//// let assert Ok(counter) = helpers.new_counter("page_views")
-//// let assert Ok(count) = helpers.increment(counter, "homepage")
+////   // Create a string-to-string cache
+////   use cache <- result.try(helpers.new_string_table("doc_helpers_user_cache"))
 ////
-//// // Create a string-to-string cache
-//// let assert Ok(cache) = helpers.new_string_table("user_cache")
+////   Ok(#(count, table.table_name(cache)))
+//// }
 //// ```
 ////
 //// ## When to Use Helpers vs. Builder
@@ -30,9 +34,9 @@
 //// - Fine-grained control over table behavior
 
 import dream_ets/config
+import dream_ets/internal
 import dream_ets/operations
 import dream_ets/table
-import gleam/option
 
 /// Create a counter table (String keys, Int values)
 ///
@@ -52,27 +56,34 @@ import gleam/option
 ///
 /// ## Example
 ///
+/// ### Count page views <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L23-L32"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
-/// import dream_ets/operations
+/// pub fn count_page_views() -> Result(List(Int), table.EtsError) {
+///   // Create counter
+///   use counter <- result.try(helpers.new_counter("doc_helpers_counter"))
 ///
-/// // Create counter
-/// let assert Ok(counter) = helpers.new_counter("page_views")
-///
-/// // Increment counters
-/// let assert Ok(1) = helpers.increment(counter, "homepage")
-/// let assert Ok(2) = helpers.increment(counter, "homepage")
-/// let assert Ok(1) = helpers.increment(counter, "about")
+///   // Increment counters
+///   use first <- result.try(helpers.increment(counter, "homepage"))
+///   use second <- result.try(helpers.increment(counter, "homepage"))
+///   use about <- result.try(helpers.increment(counter, "about"))
+///   Ok([first, second, about])
+/// }
 /// ```
 ///
 /// ## Equivalent Builder Code
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a counter with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L34-L41"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(counter) = config.new("page_views")
-///   |> config.counter()
-///   |> config.create()
+/// ```gleam
+/// pub fn counter_with_builder() -> Result(String, table.EtsError) {
+///   use counter <- result.try(
+///     config.new("doc_helpers_counter_builder")
+///     |> config.counter()
+///     |> config.create(),
+///   )
+///   Ok(table.table_name(counter))
+/// }
 /// ```
 ///
 /// ## See Also
@@ -106,27 +117,33 @@ pub fn new_counter(
 ///
 /// ## Example
 ///
+/// ### Cache a user <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L43-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
-/// import dream_ets/operations
+/// pub fn cache_user() -> Result(option.Option(String), table.EtsError) {
+///   // Create cache
+///   use cache <- result.try(helpers.new_string_table("doc_helpers_cache"))
 ///
-/// // Create cache
-/// let assert Ok(cache) = helpers.new_string_table("user_cache")
-///
-/// // Use it
-/// let assert Ok(_) = operations.set(cache, "user:123", "Alice")
-/// let assert Ok(option.Some("Alice")) = operations.get(cache, "user:123")
+///   // Use it
+///   use _ <- result.try(operations.set(cache, "user:123", "Alice"))
+///   operations.get(cache, "user:123")
+/// }
 /// ```
 ///
 /// ## Equivalent Builder Code
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a string table with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L52-L60"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("user_cache")
-///   |> config.key_string()
-///   |> config.value_string()
-///   |> config.create()
+/// ```gleam
+/// pub fn string_table_with_builder() -> Result(String, table.EtsError) {
+///   use cache <- result.try(
+///     config.new("doc_helpers_cache_builder")
+///     |> config.key_string()
+///     |> config.value_string()
+///     |> config.create(),
+///   )
+///   Ok(table.table_name(cache))
+/// }
 /// ```
 ///
 /// ## Use Cases
@@ -151,8 +168,17 @@ pub fn new_string_table(
 
 /// Atomically increment a counter value
 ///
-/// Increments a counter by 1. If the key doesn't exist, it's created with
-/// value 1. This operation is atomic and safe for concurrent access.
+/// Adds 1 to the value of `key` and returns the new value. A key that is not
+/// in the table starts at 0, so its first increment returns 1.
+///
+/// ## Concurrency
+///
+/// The read, the addition and the write are one ETS operation
+/// (`ets:update_counter/4`). Many processes can change the same key at the
+/// same time, and no change gets lost.
+///
+/// ETS adds to the stored value directly, so the table must store its values
+/// as plain integers, as `config.counter()` and `encoders.int_encoder` do.
 ///
 /// ## Parameters
 ///
@@ -162,28 +188,32 @@ pub fn new_string_table(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after incrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
+/// ### Count requests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L62-L72"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
+/// pub fn count_requests() -> Result(List(Int), table.EtsError) {
+///   use counter <- result.try(helpers.new_counter("doc_helpers_metrics"))
 ///
-/// let assert Ok(counter) = helpers.new_counter("metrics")
+///   // The first increment creates the key with value 1
+///   use first <- result.try(helpers.increment(counter, "requests"))
 ///
-/// // First increment creates the key with value 1
-/// let assert Ok(1) = helpers.increment(counter, "requests")
-///
-/// // Subsequent increments add 1
-/// let assert Ok(2) = helpers.increment(counter, "requests")
-/// let assert Ok(3) = helpers.increment(counter, "requests")
+///   // Later increments add 1
+///   use second <- result.try(helpers.increment(counter, "requests"))
+///   use third <- result.try(helpers.increment(counter, "requests"))
+///   Ok([first, second, third])
+/// }
 /// ```
-///
-/// ## Concurrency
-///
-/// This function is **not atomic** in the traditional sense. It performs
-/// get-modify-set operations. For truly atomic increments in high-concurrency
-/// scenarios, consider using Erlang's `:ets.update_counter/3` via FFI.
 ///
 /// ## See Also
 ///
@@ -198,8 +228,9 @@ pub fn increment(
 
 /// Atomically increment a counter value by a specific amount
 ///
-/// Increments a counter by the specified amount. If the key doesn't exist,
-/// it's created with the specified amount as the initial value.
+/// Adds `amount` to the value of `key` and returns the new value. A key
+/// that is not in the table starts at 0, so its first increment returns
+/// `amount`. The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -210,21 +241,31 @@ pub fn increment(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after incrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
+/// ### Add points <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L74-L84"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
+/// pub fn add_points() -> Result(List(Int), table.EtsError) {
+///   use counter <- result.try(helpers.new_counter("doc_helpers_scores"))
 ///
-/// let assert Ok(counter) = helpers.new_counter("scores")
+///   // Add 10 points
+///   use first <- result.try(helpers.increment_by(counter, "player1", 10))
+///   use second <- result.try(helpers.increment_by(counter, "player1", 10))
 ///
-/// // Add 10 points
-/// let assert Ok(10) = helpers.increment_by(counter, "player1", 10)
-/// let assert Ok(20) = helpers.increment_by(counter, "player1", 10)
-///
-/// // Can use negative amounts to decrement
-/// let assert Ok(15) = helpers.increment_by(counter, "player1", -5)
+///   // A negative amount subtracts
+///   use third <- result.try(helpers.increment_by(counter, "player1", -5))
+///   Ok([first, second, third])
+/// }
 /// ```
 ///
 /// ## Use Cases
@@ -242,42 +283,47 @@ pub fn increment_by(
   key: String,
   amount: Int,
 ) -> Result(Int, table.EtsError) {
+  let encoded_key = table.encode_key(table, key)
+  // A key that is not in the table starts at 0
+  let default_object =
+    internal.to_dynamic(#(encoded_key, table.encode_value(table, 0)))
+  case
+    internal.update_counter(
+      table.table_ref(table),
+      encoded_key,
+      amount,
+      default_object,
+    )
+  {
+    Ok(new_value) -> Ok(new_value)
+    Error(internal.InvalidOperation(message)) ->
+      refused_update_error(table, key, message)
+    // The FFI of update_counter only returns InvalidOperation and
+    // TableNotFound
+    Error(_) -> Error(table.TableNotFound)
+  }
+}
+
+// ETS refused the update. When the stored value does not decode as an Int
+// (or the key has several values), `get` gives the error that says so.
+// Otherwise ETS refused the write itself, for example on a protected table
+// of another process.
+fn refused_update_error(
+  table: table.Table(String, Int),
+  key: String,
+  message: String,
+) -> Result(Int, table.EtsError) {
   case operations.get(table, key) {
-    Ok(option.Some(current)) ->
-      increment_existing_key(table, key, current, amount)
-    Ok(option.None) -> create_new_counter_key(table, key, amount)
-    Error(err) -> Error(err)
-  }
-}
-
-fn increment_existing_key(
-  table: table.Table(String, Int),
-  key: String,
-  current: Int,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  let new_value = current + amount
-  case operations.set(table, key, new_value) {
-    Ok(_) -> Ok(new_value)
-    Error(err) -> Error(err)
-  }
-}
-
-fn create_new_counter_key(
-  table: table.Table(String, Int),
-  key: String,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  case operations.set(table, key, amount) {
-    Ok(_) -> Ok(amount)
-    Error(err) -> Error(err)
+    Ok(_) -> Error(table.OperationFailed(message))
+    Error(error) -> Error(error)
   }
 }
 
 /// Atomically decrement a counter value
 ///
-/// Decrements a counter by 1. If the key doesn't exist, it's created with
-/// value -1. This operation is safe for concurrent access.
+/// Subtracts 1 from the value of `key` and returns the new value. A key
+/// that is not in the table starts at 0, so its first decrement returns -1.
+/// The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -287,22 +333,31 @@ fn create_new_counter_key(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after decrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
+/// ### Use widgets <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L86-L96"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
-/// import dream_ets/operations
+/// pub fn use_widgets() -> Result(List(Int), table.EtsError) {
+///   use counter <- result.try(helpers.new_counter("doc_helpers_inventory"))
 ///
-/// let assert Ok(counter) = helpers.new_counter("inventory")
+///   // Set the initial value
+///   use _ <- result.try(operations.set(counter, "widgets", 100))
 ///
-/// // Set initial value
-/// let assert Ok(_) = operations.set(counter, "widgets", 100)
-///
-/// // Decrement as items are used
-/// let assert Ok(99) = helpers.decrement(counter, "widgets")
-/// let assert Ok(98) = helpers.decrement(counter, "widgets")
+///   // Decrement as items are used
+///   use first <- result.try(helpers.decrement(counter, "widgets"))
+///   use second <- result.try(helpers.decrement(counter, "widgets"))
+///   Ok([first, second])
+/// }
 /// ```
 ///
 /// ## Use Cases
@@ -324,8 +379,9 @@ pub fn decrement(
 
 /// Atomically decrement a counter value by a specific amount
 ///
-/// Decrements a counter by the specified amount. If the key doesn't exist,
-/// it's created with the negative of the specified amount as the initial value.
+/// Subtracts `amount` from the value of `key` and returns the new value. A
+/// key that is not in the table starts at 0, so its first decrement returns
+/// `-amount`. The change is one atomic ETS operation, as for `increment()`.
 ///
 /// ## Parameters
 ///
@@ -336,22 +392,31 @@ pub fn decrement(
 /// ## Returns
 ///
 /// - `Ok(Int)`: The new value after decrementing
-/// - `Error(EtsError)`: An error occurred
+/// - `Error(TableNotFound)`: The table does not exist (for example, it was
+///   deleted)
+/// - `Error(DecodeError(error))`: The stored value is not an `Int`. The value
+///   does not change.
+/// - `Error(OperationFailed("ETS refused the operation: badarg"))`: The table
+///   exists, but ETS refused the operation (for example, the calling
+///   process cannot write to the table, or the table is a bag or
+///   duplicate_bag table)
 ///
 /// ## Example
 ///
+/// ### Deduct API calls <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L98-L108"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/helpers
-/// import dream_ets/operations
+/// pub fn deduct_api_calls() -> Result(List(Int), table.EtsError) {
+///   use counter <- result.try(helpers.new_counter("doc_helpers_quota"))
 ///
-/// let assert Ok(counter) = helpers.new_counter("quota")
+///   // Set the initial quota
+///   use _ <- result.try(operations.set(counter, "api_calls", 1000))
 ///
-/// // Set initial quota
-/// let assert Ok(_) = operations.set(counter, "api_calls", 1000)
-///
-/// // Deduct batch of API calls
-/// let assert Ok(900) = helpers.decrement_by(counter, "api_calls", 100)
-/// let assert Ok(850) = helpers.decrement_by(counter, "api_calls", 50)
+///   // Deduct a batch of API calls
+///   use first <- result.try(helpers.decrement_by(counter, "api_calls", 100))
+///   use second <- result.try(helpers.decrement_by(counter, "api_calls", 50))
+///   Ok([first, second])
+/// }
 /// ```
 ///
 /// ## Use Cases
@@ -369,35 +434,5 @@ pub fn decrement_by(
   key: String,
   amount: Int,
 ) -> Result(Int, table.EtsError) {
-  case operations.get(table, key) {
-    Ok(option.Some(current)) ->
-      decrement_existing_key(table, key, current, amount)
-    Ok(option.None) -> create_new_negative_counter_key(table, key, amount)
-    Error(err) -> Error(err)
-  }
-}
-
-fn decrement_existing_key(
-  table: table.Table(String, Int),
-  key: String,
-  current: Int,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  let new_value = current - amount
-  case operations.set(table, key, new_value) {
-    Ok(_) -> Ok(new_value)
-    Error(err) -> Error(err)
-  }
-}
-
-fn create_new_negative_counter_key(
-  table: table.Table(String, Int),
-  key: String,
-  amount: Int,
-) -> Result(Int, table.EtsError) {
-  let initial_value = 0 - amount
-  case operations.set(table, key, initial_value) {
-    Ok(_) -> Ok(initial_value)
-    Error(err) -> Error(err)
-  }
+  increment_by(table, key, 0 - amount)
 }

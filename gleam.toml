@@ -2,16 +2,34 @@ name = "dream_ets"
 version = "3.0.0"
 description = "Type-safe ETS (Erlang Term Storage) for Gleam"
 licences = ["MIT"]
-repository = { type = "github", user = "TrustBound", repo = "dream" }
+repository = { type = "github", user = "TrustBound", repo = "dream_ets" }
 links = [
     { title = "Documentation", href = "https://hexdocs.pm/dream_ets" },
-    { title = "GitHub", href = "https://github.com/TrustBound/dream" },
+    { title = "GitHub", href = "https://github.com/TrustBound/dream_ets" },
+]
+
+[documentation]
+pages = [
+    { title = "Getting started", path = "guides/getting-started.html", source = "./docs/guides/getting-started.md" },
+    { title = "Caching data in memory", path = "guides/caching.html", source = "./docs/guides/caching.md" },
+    { title = "Counting events", path = "guides/counting.html", source = "./docs/guides/counting.md" },
+    { title = "Locks and work queues", path = "guides/locks-and-queues.html", source = "./docs/guides/locks-and-queues.md" },
+    { title = "Saving a table to disk", path = "guides/saving-to-disk.html", source = "./docs/guides/saving-to-disk.md" },
+    { title = "Settings and errors reference", path = "guides/settings-and-errors.html", source = "./docs/guides/settings-and-errors.md" },
 ]
 
 [dependencies]
 gleam_erlang = ">= 1.0.0 and < 2.0.0"
-gleam_json = ">= 3.0.1 and < 4.0.0"
 gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
-dream_test = ">= 1.0.3 and < 2.0.0"
+dream_test = ">= 3.0.0 and < 4.0.0"
+# The snippets store custom types as JSON.
+gleam_json = ">= 3.0.1 and < 4.0.0"
+dream_snippets = ">= 1.0.0 and < 2.0.0"
+
+[tools.dream_snippets]
+# Changelog sections and release notes before this version are history. They are not checked.
+checked_from_version = "3.0.0"
+# The files that the tests and CI use: the code blocks of the docs may copy them.
+tested_files = ["test", ".github", "scripts", "gleam.toml"]

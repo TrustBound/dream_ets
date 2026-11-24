@@ -1,40 +1,56 @@
-//// Main test entry point using dream_test framework.
+//// Test entry point. Runs every suite with the dream_test runner and
+//// measures the line coverage of `src/`.
 
-import dream_test/reporter/bdd.{report}
-import dream_test/runner.{run_all}
-import dream_test/unit.{to_test_cases}
-import gleam/io
-import gleam/list
-
-import advanced_operations_test
-import concurrency_test
-import config_test
-import counter_test
-import deleted_table_test
-import encoders_test
-import error_handling_test
-import helpers_test
-import persistence_test
+import doc_snippets_test
+import dream_ets/config_test
+import dream_ets/encoders_test
+import dream_ets/guide_caching_test
+import dream_ets/guide_counting_test
+import dream_ets/guide_getting_started_test
+import dream_ets/guide_locks_test
+import dream_ets/guide_saving_test
+import dream_ets/helpers_test
+import dream_ets/operations_test
+import dream_ets/table_test
+import dream_test/coverage
+import dream_test/reporters/bdd
+import dream_test/reporters/progress
+import dream_test/runner
+import snippets/guide_caching_testing
+import snippets/guide_counting_testing
+import snippets/guide_getting_started_testing
+import snippets/guide_locks_testing
+import snippets/guide_saving_testing
 import snippets_test
-import table_operations_test
-import type_safety_test
 
 pub fn main() {
-  [
-    to_test_cases("config", config_test.tests()),
-    to_test_cases("counter", counter_test.tests()),
-    to_test_cases("table_operations", table_operations_test.tests()),
-    to_test_cases("type_safety", type_safety_test.tests()),
-    to_test_cases("error_handling", error_handling_test.tests()),
-    to_test_cases("deleted_table", deleted_table_test.tests()),
-    to_test_cases("concurrency", concurrency_test.tests()),
-    to_test_cases("helpers", helpers_test.tests()),
-    to_test_cases("encoders", encoders_test.tests()),
-    to_test_cases("persistence", persistence_test.tests()),
-    to_test_cases("advanced_operations", advanced_operations_test.tests()),
-    to_test_cases("snippets", snippets_test.tests()),
-  ]
-  |> list.flatten
-  |> run_all()
-  |> report(io.print)
+  runner.new([
+    config_test.tests(),
+    encoders_test.tests(),
+    helpers_test.tests(),
+    operations_test.tests(),
+    table_test.tests(),
+    snippets_test.tests(),
+    doc_snippets_test.tests(),
+    guide_getting_started_test.tests(),
+    guide_getting_started_testing.tests(),
+    guide_caching_test.tests(),
+    guide_caching_testing.tests(),
+    guide_counting_test.tests(),
+    guide_counting_testing.tests(),
+    guide_locks_test.tests(),
+    guide_locks_testing.tests(),
+    guide_saving_test.tests(),
+    guide_saving_testing.tests(),
+  ])
+  |> runner.progress_reporter(progress.new())
+  |> runner.results_reporters([bdd.new()])
+  |> runner.coverage(
+    coverage.new()
+    |> coverage.show_missing()
+    |> coverage.minimum_percent(100.0)
+    |> coverage.json_path("build/coverage/coverage.json"),
+  )
+  |> runner.exit_on_failure()
+  |> runner.run()
 }

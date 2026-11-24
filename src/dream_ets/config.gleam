@@ -6,29 +6,43 @@
 ////
 //// ## Quick Start
 ////
+//// ### Create tables <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L16-L49"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+////
 //// ```gleam
-//// import dream_ets/config
+//// pub fn quick_start() -> Result(List(String), table.EtsError) {
+////   // Create a simple string-to-string table
+////   use users <- result.try(
+////     config.new("doc_config_users")
+////     |> config.key_string()
+////     |> config.value_string()
+////     |> config.create(),
+////   )
 ////
-//// // Create a simple string-to-string table
-//// let assert Ok(table) = config.new("users")
-////   |> config.key_string()
-////   |> config.value_string()
-////   |> config.create()
+////   // Create a counter table (String keys, Int values)
+////   use counter <- result.try(
+////     config.new("doc_config_page_views")
+////     |> config.counter()
+////     |> config.create(),
+////   )
 ////
-//// // Create a counter table (String keys, Int values)
-//// let assert Ok(counter) = config.new("page_views")
-////   |> config.counter()
-////   |> config.create()
+////   // Create with custom configuration
+////   use cache <- result.try(
+////     config.new("doc_config_cache")
+////     |> config.table_type(config.table_type_set())
+////     |> config.access(config.access_public())
+////     |> config.read_concurrency(True)
+////     |> config.write_concurrency(False)
+////     |> config.key_string()
+////     |> config.value_string()
+////     |> config.create(),
+////   )
 ////
-//// // Create with custom configuration
-//// let assert Ok(table) = config.new("cache")
-////   |> config.table_type(config.table_type_set())
-////   |> config.access(config.access_public())
-////   |> config.read_concurrency(True)
-////   |> config.write_concurrency(False)
-////   |> config.key_string()
-////   |> config.value_string()
-////   |> config.create()
+////   Ok([
+////     table.table_name(users),
+////     table.table_name(counter),
+////     table.table_name(cache),
+////   ])
+//// }
 //// ```
 ////
 //// ## Builder Pattern
@@ -68,11 +82,9 @@ pub opaque type TableConfig(key, value) {
     name: String,
     table_type: TableType,
     access: Access,
-    keypos: Int,
     read_concurrency: Bool,
     write_concurrency: Bool,
     compressed: Bool,
-    named_table: Bool,
     key_encoder: option.Option(fn(key) -> dynamic.Dynamic),
     key_decoder: option.Option(decode.Decoder(key)),
     value_encoder: option.Option(fn(value) -> dynamic.Dynamic),
@@ -94,9 +106,13 @@ pub opaque type TableConfig(key, value) {
 /// **Note:** Most applications should use `Set` (the default). Only use other
 /// types if you have specific requirements for ordering or duplicate values.
 pub type TableType {
+  /// Keys are unique. The order of keys is not fixed. This is the default.
   Set
+  /// Keys are unique and kept in sorted order.
   OrderedSet
+  /// A key can have more than one value. Identical objects are stored once.
   Bag
+  /// A key can have more than one value, including identical objects.
   DuplicateBag
 }
 
@@ -113,8 +129,11 @@ pub type TableType {
 /// **Note:** In Dream applications, `Public` is usually the right choice since
 /// the table typically outlives individual request processes.
 pub type Access {
+  /// Any process can read and write. This is the default.
   Public
+  /// Only the owner process can write. Any process can read.
   Protected
+  /// Only the owner process can read and write.
   Private
 }
 
@@ -129,14 +148,16 @@ pub type Access {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a set table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L51-L57"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let table = config.new("cache")
+/// ```gleam
+/// pub fn set_table() -> Result(table.Table(String, String), table.EtsError) {
+///   config.new("doc_config_set")
 ///   |> config.table_type(config.table_type_set())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 pub fn table_type_set() -> TableType {
   Set
@@ -154,15 +175,17 @@ pub fn table_type_set() -> TableType {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a leaderboard <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L59-L66"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Useful for leaderboards or sorted data
-/// let table = config.new("leaderboard")
+/// ```gleam
+/// pub fn leaderboard() -> Result(table.Table(String, String), table.EtsError) {
+///   // Useful for leaderboards or sorted data
+///   config.new("doc_config_leaderboard")
 ///   |> config.table_type(config.table_type_ordered_set())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 pub fn table_type_ordered_set() -> TableType {
   OrderedSet
@@ -176,6 +199,21 @@ pub fn table_type_ordered_set() -> TableType {
 /// ## Returns
 ///
 /// A `Bag` table type.
+///
+/// ## Example
+///
+/// ### Create a bag table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L246-L253"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn tag_bag() -> Result(table.Table(String, String), table.EtsError) {
+///   // A bag keeps several different values under one key
+///   config.new("doc_config_tags")
+///   |> config.table_type(config.table_type_bag())
+///   |> config.key_string()
+///   |> config.value_string()
+///   |> config.create()
+/// }
+/// ```
 pub fn table_type_bag() -> TableType {
   Bag
 }
@@ -188,6 +226,21 @@ pub fn table_type_bag() -> TableType {
 /// ## Returns
 ///
 /// A `DuplicateBag` table type.
+///
+/// ## Example
+///
+/// ### Create a duplicate bag table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L255-L262"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn event_log() -> Result(table.Table(String, String), table.EtsError) {
+///   // A duplicate bag also keeps identical values under one key
+///   config.new("doc_config_events")
+///   |> config.table_type(config.table_type_duplicate_bag())
+///   |> config.key_string()
+///   |> config.value_string()
+///   |> config.create()
+/// }
+/// ```
 pub fn table_type_duplicate_bag() -> TableType {
   DuplicateBag
 }
@@ -203,14 +256,16 @@ pub fn table_type_duplicate_bag() -> TableType {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a public table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L68-L74"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let table = config.new("sessions")
+/// ```gleam
+/// pub fn public_sessions() -> Result(table.Table(String, String), table.EtsError) {
+///   config.new("doc_config_sessions")
 ///   |> config.access(config.access_public())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 pub fn access_public() -> Access {
   Public
@@ -228,15 +283,20 @@ pub fn access_public() -> Access {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a protected table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L76-L86"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Useful for configuration that rarely changes
-/// let table = config.new("config")
+/// ```gleam
+/// pub fn protected_settings() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Protected: only the owner can write, any process can read
+///   config.new("doc_config_settings")
 ///   |> config.access(config.access_protected())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 pub fn access_protected() -> Access {
   Protected
@@ -250,6 +310,21 @@ pub fn access_protected() -> Access {
 /// ## Returns
 ///
 /// A `Private` access mode.
+///
+/// ## Example
+///
+/// ### Create a private table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L264-L271"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn private_scratch() -> Result(table.Table(String, String), table.EtsError) {
+///   // Private: only the owner process can read and write
+///   config.new("doc_config_scratch")
+///   |> config.access(config.access_private())
+///   |> config.key_string()
+///   |> config.value_string()
+///   |> config.create()
+/// }
+/// ```
 pub fn access_private() -> Access {
   Private
 }
@@ -281,13 +356,15 @@ pub fn access_private() -> Access {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L88-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("users")
+/// ```gleam
+/// pub fn new_users() -> Result(table.Table(String, String), table.EtsError) {
+///   config.new("doc_config_new_users")
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## See Also
@@ -300,11 +377,9 @@ pub fn new(name: String) -> TableConfig(k, v) {
     name: name,
     table_type: Set,
     access: Public,
-    keypos: 1,
     read_concurrency: False,
     write_concurrency: False,
     compressed: False,
-    named_table: True,
     key_encoder: option.None,
     key_decoder: option.None,
     value_encoder: option.None,
@@ -328,14 +403,17 @@ pub fn new(name: String) -> TableConfig(k, v) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a sorted table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L59-L66"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("sorted_cache")
+/// ```gleam
+/// pub fn leaderboard() -> Result(table.Table(String, String), table.EtsError) {
+///   // Useful for leaderboards or sorted data
+///   config.new("doc_config_leaderboard")
 ///   |> config.table_type(config.table_type_ordered_set())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## Performance Notes
@@ -351,11 +429,9 @@ pub fn table_type(
     name,
     _,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
-    named_table,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -366,11 +442,9 @@ pub fn table_type(
     name: name,
     table_type: type_,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: value_encoder,
@@ -394,15 +468,20 @@ pub fn table_type(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a protected table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L76-L86"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Protected: only owner can write, anyone can read
-/// let assert Ok(table) = config.new("config_cache")
+/// ```gleam
+/// pub fn protected_settings() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Protected: only the owner can write, any process can read
+///   config.new("doc_config_settings")
 ///   |> config.access(config.access_protected())
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## Access Modes
@@ -418,11 +497,9 @@ pub fn access(
     name,
     table_type,
     _,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
-    named_table,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -433,62 +510,9 @@ pub fn access(
     name: name,
     table_type: table_type,
     access: access_mode,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    named_table: named_table,
-    key_encoder: key_encoder,
-    key_decoder: key_decoder,
-    value_encoder: value_encoder,
-    value_decoder: value_decoder,
-  )
-}
-
-/// Set the key position in tuples (default: 1)
-///
-/// Configures which element of a tuple to use as the key. This is an advanced
-/// feature for tuple-based tables. **Most users will never need this.**
-///
-/// ## Parameters
-///
-/// - `config`: The table configuration to modify
-/// - `pos`: The 1-based position of the key in tuples (default: 1)
-///
-/// ## Returns
-///
-/// The updated configuration.
-///
-/// ## Note
-///
-/// This is only relevant when storing tuples directly in ETS. For typed
-/// tables using encoders/decoders (the recommended approach), this setting
-/// is handled automatically.
-pub fn keypos(config: TableConfig(k, v), pos: Int) -> TableConfig(k, v) {
-  let TableConfig(
-    name,
-    table_type,
-    access,
-    _,
-    read_concurrency,
-    write_concurrency,
-    compressed,
-    named_table,
-    key_encoder,
-    key_decoder,
-    value_encoder,
-    value_decoder,
-  ) = config
-
-  TableConfig(
-    name: name,
-    table_type: table_type,
-    access: access,
-    keypos: pos,
-    read_concurrency: read_concurrency,
-    write_concurrency: write_concurrency,
-    compressed: compressed,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: value_encoder,
@@ -512,15 +536,17 @@ pub fn keypos(config: TableConfig(k, v), pos: Int) -> TableConfig(k, v) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Optimize for readers <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L95-L102"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Optimize for many simultaneous readers
-/// let assert Ok(table) = config.new("user_cache")
+/// ```gleam
+/// pub fn read_heavy_cache() -> Result(table.Table(String, String), table.EtsError) {
+///   // Optimize for many simultaneous readers
+///   config.new("doc_config_read_heavy")
 ///   |> config.read_concurrency(True)
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## When to Use
@@ -540,11 +566,9 @@ pub fn read_concurrency(
     name,
     table_type,
     access,
-    keypos,
     _,
     write_concurrency,
     compressed,
-    named_table,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -555,11 +579,9 @@ pub fn read_concurrency(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: enabled,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: value_encoder,
@@ -583,15 +605,20 @@ pub fn read_concurrency(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Optimize for writers <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L104-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Optimize for many simultaneous writers
-/// let assert Ok(table) = config.new("metrics")
+/// ```gleam
+/// pub fn write_heavy_metrics() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Optimize for many simultaneous writers
+///   config.new("doc_config_metrics")
 ///   |> config.write_concurrency(True)
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## When to Use
@@ -616,11 +643,9 @@ pub fn write_concurrency(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     _,
     compressed,
-    named_table,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -631,11 +656,9 @@ pub fn write_concurrency(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: enabled,
     compressed: compressed,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: value_encoder,
@@ -659,15 +682,20 @@ pub fn write_concurrency(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Compress values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L116-L126"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Compress large JSON values
-/// let assert Ok(table) = config.new("documents")
+/// ```gleam
+/// pub fn compressed_documents() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Compress large JSON values
+///   config.new("doc_config_documents")
 ///   |> config.compressed(True)
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## When to Use
@@ -688,11 +716,9 @@ pub fn compressed(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     _,
-    named_table,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -703,11 +729,9 @@ pub fn compressed(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: enabled,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: value_encoder,
@@ -733,42 +757,51 @@ pub fn compressed(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
-/// import gleam/dynamic
+/// ### Use a built-in key encoder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L128-L137"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Using built-in encoders
-/// let assert Ok(table) = config.new("users")
+/// ```gleam
+/// pub fn builtin_key_encoder() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Using built-in encoders
+///   config.new("doc_config_key_builtin")
 ///   |> config.key(encoders.string_encoder, encoders.string_decoder())
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## Custom Encoders
 ///
 /// For custom types, provide your own encoder/decoder:
 ///
-/// ```gleam
-/// import gleam/dynamic/decode
+/// ### Use a custom key type <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L139-L161"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
+/// ```gleam
 /// pub type UserId {
 ///   UserId(Int)
 /// }
 ///
-/// fn encode_user_id(id: UserId) -> dynamic.Dynamic {
-///   let UserId(n) = id
-///   dynamic.from(n)
+/// pub fn encode_user_id(id: UserId) -> dynamic.Dynamic {
+///   let UserId(number) = id
+///   dynamic.int(number)
 /// }
 ///
-/// fn decode_user_id() -> decode.Decoder(UserId) {
+/// pub fn decode_user_id() -> decode.Decoder(UserId) {
 ///   decode.int |> decode.map(UserId)
 /// }
 ///
-/// let assert Ok(table) = config.new("users")
-///   |> config.key(encode_user_id, decode_user_id())
-///   |> config.value_string()
-///   |> config.create()
+/// pub fn custom_key_encoder() -> Result(option.Option(String), table.EtsError) {
+///   use users <- result.try(
+///     config.new("doc_config_key_custom")
+///     |> config.key(encode_user_id, decode_user_id())
+///     |> config.value_string()
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(users, UserId(7), "Ada"))
+///   operations.get(users, UserId(7))
+/// }
 /// ```
 ///
 /// ## See Also
@@ -784,11 +817,9 @@ pub fn key(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
-    named_table,
     _,
     _,
     value_encoder,
@@ -799,11 +830,9 @@ pub fn key(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    named_table: named_table,
     key_encoder: option.Some(encoder),
     key_decoder: option.Some(decoder),
     value_encoder: value_encoder,
@@ -829,43 +858,64 @@ pub fn key(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
-/// import dream_ets/encoders
+/// ### Use a built-in value encoder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L163-L172"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// // Using built-in encoders
-/// let assert Ok(table) = config.new("cache")
+/// ```gleam
+/// pub fn builtin_value_encoder() -> Result(
+///   table.Table(String, String),
+///   table.EtsError,
+/// ) {
+///   // Using built-in encoders
+///   config.new("doc_config_value_builtin")
 ///   |> config.key_string()
 ///   |> config.value(encoders.string_encoder, encoders.string_decoder())
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## Custom Encoders
 ///
 /// For custom types like JSON or complex structures:
 ///
-/// ```gleam
-/// import gleam/json
-/// import gleam/dynamic/decode
+/// ### Store a custom type as JSON <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L174-L210"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
+/// ```gleam
 /// pub type User {
 ///   User(name: String, age: Int)
 /// }
 ///
-/// fn encode_user(user: User) -> dynamic.Dynamic {
+/// pub fn encode_user(user: User) -> dynamic.Dynamic {
 ///   json.object([
 ///     #("name", json.string(user.name)),
 ///     #("age", json.int(user.age)),
 ///   ])
 ///   |> json.to_string
-///   |> dynamic.from
+///   |> dynamic.string
 /// }
 ///
-/// fn decode_user() -> decode.Decoder(User) {
-///   decode.string
-///   |> decode.then(fn(str) {
-///     // Parse JSON and decode User...
-///   })
+/// pub fn decode_user() -> decode.Decoder(User) {
+///   use json_text <- decode.then(decode.string)
+///   case json.parse(json_text, user_from_json()) {
+///     Ok(user) -> decode.success(user)
+///     Error(_) -> decode.failure(User("", 0), "User JSON")
+///   }
+/// }
+///
+/// fn user_from_json() -> decode.Decoder(User) {
+///   use name <- decode.field("name", decode.string)
+///   use age <- decode.field("age", decode.int)
+///   decode.success(User(name: name, age: age))
+/// }
+///
+/// pub fn custom_value_encoder() -> Result(option.Option(User), table.EtsError) {
+///   use users <- result.try(
+///     config.new("doc_config_value_custom")
+///     |> config.key_string()
+///     |> config.value(encode_user, decode_user())
+///     |> config.create(),
+///   )
+///   use _ <- result.try(operations.set(users, "ada", User("Ada", 36)))
+///   operations.get(users, "ada")
 /// }
 /// ```
 ///
@@ -882,11 +932,9 @@ pub fn value(
     name,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
-    named_table,
     key_encoder,
     key_decoder,
     _,
@@ -897,11 +945,9 @@ pub fn value(
     name: name,
     table_type: table_type,
     access: access,
-    keypos: keypos,
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    named_table: named_table,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
     value_encoder: option.Some(encoder),
@@ -924,13 +970,15 @@ pub fn value(
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a table with String keys <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L88-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("users")
+/// ```gleam
+/// pub fn new_users() -> Result(table.Table(String, String), table.EtsError) {
+///   config.new("doc_config_new_users")
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## See Also
@@ -957,13 +1005,15 @@ pub fn key_string(config: TableConfig(String, v)) -> TableConfig(String, v) {
 ///
 /// ## Example
 ///
-/// ```gleam
-/// import dream_ets/config
+/// ### Create a table with String values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L88-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
-/// let assert Ok(table) = config.new("cache")
+/// ```gleam
+/// pub fn new_users() -> Result(table.Table(String, String), table.EtsError) {
+///   config.new("doc_config_new_users")
 ///   |> config.key_string()
 ///   |> config.value_string()
 ///   |> config.create()
+/// }
 /// ```
 ///
 /// ## See Also
@@ -991,17 +1041,20 @@ pub fn value_string(config: TableConfig(k, String)) -> TableConfig(k, String) {
 ///
 /// ## Example
 ///
+/// ### Create a counter table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L212-L222"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/config
-/// import dream_ets/helpers
+/// pub fn counter_table() -> Result(Int, table.EtsError) {
+///   // Create a counter table
+///   use counter <- result.try(
+///     config.new("doc_config_counter")
+///     |> config.counter()
+///     |> config.create(),
+///   )
 ///
-/// // Create a counter table
-/// let assert Ok(counter) = config.new("page_views")
-///   |> config.counter()
-///   |> config.create()
-///
-/// // Use with increment helpers
-/// let assert Ok(count) = helpers.increment(counter, "homepage")
+///   // Use with increment helpers
+///   helpers.increment(counter, "homepage")
+/// }
 /// ```
 ///
 /// ## See Also
@@ -1030,26 +1083,36 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 /// - `Error(TableAlreadyExists)`: A table with this name already exists
 /// - `Error(InvalidKey)`: Key encoder/decoder not set
 /// - `Error(InvalidValue)`: Value encoder/decoder not set
-/// - `Error(OperationFailed)`: ETS creation failed
+/// - `Error(OperationFailed("ETS rejected the table name: system_limit"))`:
+///   The name has more than 255 characters. The text after the colon is the
+///   reason that ETS gave
 ///
 /// ## Example
 ///
+/// ### Create tables <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_config.gleam#L224-L244"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
 /// ```gleam
-/// import dream_ets/config
+/// pub fn create_tables() -> Result(List(String), table.EtsError) {
+///   // Create a simple table
+///   use users <- result.try(
+///     config.new("doc_config_create_users")
+///     |> config.key_string()
+///     |> config.value_string()
+///     |> config.create(),
+///   )
 ///
-/// // Create a simple table
-/// let assert Ok(table) = config.new("users")
-///   |> config.key_string()
-///   |> config.value_string()
-///   |> config.create()
+///   // Create with custom settings
+///   use cache <- result.try(
+///     config.new("doc_config_create_cache")
+///     |> config.read_concurrency(True)
+///     |> config.write_concurrency(True)
+///     |> config.key_string()
+///     |> config.value_string()
+///     |> config.create(),
+///   )
 ///
-/// // Create with custom settings
-/// let assert Ok(table) = config.new("cache")
-///   |> config.read_concurrency(True)
-///   |> config.write_concurrency(True)
-///   |> config.key_string()
-///   |> config.value_string()
-///   |> config.create()
+///   Ok([table.table_name(users), table.table_name(cache)])
+/// }
 /// ```
 ///
 /// ## Errors
@@ -1059,7 +1122,7 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 /// 1. A table with the same name already exists
 /// 2. Key encoder/decoder was not configured
 /// 3. Value encoder/decoder was not configured
-/// 4. ETS table creation fails for any reason
+/// 4. ETS rejects the table options (`OperationFailed`)
 ///
 /// ## See Also
 ///
@@ -1079,8 +1142,6 @@ fn validate_config(
   config: TableConfig(k, v),
 ) -> Result(TableConfig(k, v), table.EtsError) {
   let TableConfig(
-    _,
-    _,
     _,
     _,
     _,
@@ -1118,11 +1179,9 @@ fn build_ets_options(
     _,
     table_type,
     access,
-    keypos,
     read_concurrency,
     write_concurrency,
     compressed,
-    named_table,
     _,
     _,
     _,
@@ -1139,11 +1198,11 @@ fn build_ets_options(
     add_write_concurrency_option(write_concurrency, options_with_read)
   let options_with_compressed =
     add_compressed_option(compressed, options_with_write)
-  let options_with_named =
-    add_named_table_option(named_table, options_with_compressed)
-  let final_options = add_keypos_option(keypos, options_with_named)
-
-  Ok(final_options)
+  let options_with_named = [
+    atom.create("named_table") |> atom_to_dynamic,
+    ..options_with_compressed
+  ]
+  Ok(options_with_named)
 }
 
 fn table_type_to_atom(table_type: TableType) -> dynamic.Dynamic {
@@ -1193,37 +1252,12 @@ fn add_compressed_option(
   }
 }
 
-fn add_named_table_option(
-  enabled: Bool,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
-  case enabled {
-    True -> [atom.create("named_table") |> atom_to_dynamic, ..options]
-    False -> options
-  }
-}
-
-fn add_keypos_option(
-  pos: Int,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
-  case pos {
-    1 -> options
-    n -> [create_keypos_tuple(n), ..options]
-  }
-}
-
 fn create_concurrency_tuple(
   option_name: String,
   value: Bool,
 ) -> dynamic.Dynamic {
   let key_atom = atom.create(option_name)
   internal.to_dynamic(#(key_atom, value))
-}
-
-fn create_keypos_tuple(pos: Int) -> dynamic.Dynamic {
-  let key_atom = atom.create("keypos")
-  internal.to_dynamic(#(key_atom, pos))
 }
 
 fn atom_to_dynamic(a: atom.Atom) -> dynamic.Dynamic {
@@ -1241,8 +1275,6 @@ fn create_table_with_options(
     _,
     _,
     _,
-    _,
-    _,
     key_encoder,
     key_decoder,
     value_encoder,
@@ -1254,22 +1286,23 @@ fn create_table_with_options(
   let assert option.Some(encoder_v) = value_encoder
   let assert option.Some(decoder_v) = value_decoder
 
-  case internal.new_table(name, options) {
-    Ok(table_ref) -> {
-      Ok(table.new_table(
-        table_ref,
-        name,
-        encoder_k,
-        decoder_k,
-        encoder_v,
-        decoder_v,
-      ))
-    }
-    Error(internal.AlreadyExists) -> Error(table.TableAlreadyExists)
-    Error(internal.InvalidOperation(msg)) -> Error(table.OperationFailed(msg))
-    Error(internal.NotFound) -> Error(table.TableNotFound)
-    Error(internal.TableNotFound) -> Error(table.TableNotFound)
-    Error(internal.EmptyTable) -> Error(table.EmptyTable)
-    Error(internal.EndOfTable) -> Error(table.EndOfTable)
+  internal.new_table(name, options)
+  |> result.map(table.new_table(
+    _,
+    name,
+    encoder_k,
+    decoder_k,
+    encoder_v,
+    decoder_v,
+  ))
+  |> result.map_error(new_table_error_to_ets_error)
+}
+
+fn new_table_error_to_ets_error(
+  error: internal.NewTableError,
+) -> table.EtsError {
+  case error {
+    internal.NameInUse -> table.TableAlreadyExists
+    internal.OptionsRejected(message) -> table.OperationFailed(message)
   }
 }

@@ -3,71 +3,36 @@
 //// Low-level wrappers around FFI. No public API.
 
 import gleam/dynamic
-import gleam/erlang/atom
+import gleam/result
 
 pub type EtsTableRef
 
 pub type EtsFfiError {
-  /// The key was not found
-  NotFound
+  /// The key has more than one object, and the operation needs one
+  SeveralObjects(Int)
   /// The table does not exist (for example, it was deleted)
   TableNotFound
-  AlreadyExists
   InvalidOperation(String)
   EmptyTable
   EndOfTable
 }
 
-@external(erlang, "internal_ffi", "ets_new")
-fn ets_new_ffi(
-  name_atom: atom.Atom,
-  options: List(dynamic.Dynamic),
-) -> Result(Int, EtsFfiError)
+/// Why ETS did not create a table.
+pub type NewTableError {
+  /// A named table with this name already exists.
+  NameInUse
+  /// ETS rejected the table options. The message gives the reason.
+  OptionsRejected(String)
+}
 
-pub fn ets_new(
+/// Creates the table. Returns `Error(NameInUse)` when a named table with
+/// this name already exists, and `Error(OptionsRejected(message))` when ETS
+/// rejects the name or the options.
+@external(erlang, "internal_ffi", "ets_new")
+fn ets_new(
   name: String,
   options: List(dynamic.Dynamic),
-) -> Result(Int, EtsFfiError) {
-  let name_atom = atom.create(name)
-  case ets_new_ffi(name_atom, options) {
-    Ok(table_id) -> Ok(table_id)
-    Error(err) -> handle_new_table_error(name_atom, err)
-  }
-}
-
-fn handle_new_table_error(
-  name_atom: atom.Atom,
-  err: EtsFfiError,
-) -> Result(Int, EtsFfiError) {
-  case err {
-    _ -> check_if_duplicate_table(name_atom, err)
-  }
-}
-
-fn check_if_duplicate_table(
-  name_atom: atom.Atom,
-  original_error: EtsFfiError,
-) -> Result(Int, EtsFfiError) {
-  // Try to get table info by name (named tables can be accessed by name atom)
-  // If we can get info, table exists (duplicate)
-  // If not, the original error was from invalid options
-  case check_table_exists_by_name(name_atom) {
-    True -> Error(AlreadyExists)
-    False -> Error(original_error)
-  }
-}
-
-fn check_table_exists_by_name(name_atom: atom.Atom) -> Bool {
-  case ets_info_ffi_by_name(name_atom) {
-    Ok(_) -> True
-    Error(_) -> False
-  }
-}
-
-@external(erlang, "internal_ffi", "ets_info_by_name")
-fn ets_info_ffi_by_name(
-  name_atom: atom.Atom,
-) -> Result(List(dynamic.Dynamic), EtsFfiError)
+) -> Result(Int, NewTableError)
 
 @external(erlang, "internal_ffi", "ets_match")
 pub fn ets_match(
@@ -103,7 +68,7 @@ pub fn ets_insert(
 pub fn ets_lookup(
   table_id: Int,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError)
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
 
 @external(erlang, "internal_ffi", "ets_delete_table")
 pub fn ets_delete_table(table_id: Int) -> Result(Nil, EtsFfiError)
@@ -112,12 +77,6 @@ pub fn ets_delete_table(table_id: Int) -> Result(Nil, EtsFfiError)
 pub fn ets_delete_key(
   table_id: Int,
   key: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError)
-
-@external(erlang, "internal_ffi", "ets_delete_object")
-pub fn ets_delete_object(
-  table_id: Int,
-  object: dynamic.Dynamic,
 ) -> Result(Nil, EtsFfiError)
 
 @external(erlang, "internal_ffi", "ets_delete_all_objects")
@@ -148,17 +107,31 @@ pub fn ets_insert_new(
 pub fn ets_take(
   table_id: Int,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError)
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
+
+@external(erlang, "internal_ffi", "ets_take_one")
+pub fn ets_take_one(
+  table_id: Int,
+  key: dynamic.Dynamic,
+) -> Result(List(dynamic.Dynamic), EtsFfiError)
 
 @external(erlang, "internal_ffi", "ets_update_element")
 pub fn ets_update_element(
   table_id: Int,
   key: dynamic.Dynamic,
   update_tuple: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError)
+) -> Result(Bool, EtsFfiError)
 
-@external(erlang, "internal_ffi", "ets_info")
-pub fn ets_info(table_id: Int) -> Result(List(dynamic.Dynamic), EtsFfiError)
+@external(erlang, "internal_ffi", "ets_update_counter")
+pub fn ets_update_counter(
+  table_id: Int,
+  key: dynamic.Dynamic,
+  amount: Int,
+  default_object: dynamic.Dynamic,
+) -> Result(Int, EtsFfiError)
+
+@external(erlang, "internal_ffi", "ets_size")
+pub fn ets_size(table_id: Int) -> Result(Int, EtsFfiError)
 
 @external(erlang, "internal_ffi", "to_dynamic")
 pub fn to_dynamic(value: a) -> dynamic.Dynamic
@@ -169,14 +142,16 @@ pub fn wrap_table_ref_ffi(table_id: Int) -> EtsTableRef
 @external(erlang, "internal_ffi", "unwrap_table_ref")
 pub fn unwrap_table_ref_ffi(table: EtsTableRef) -> Int
 
+/// Creates a table with the given name and options. Returns
+/// `Error(NameInUse)` when a named table with this name already exists, and
+/// `Error(OptionsRejected(message))` when ETS rejects the name (it has more
+/// than 255 characters) or the options.
 pub fn new_table(
   name: String,
   options: List(dynamic.Dynamic),
-) -> Result(EtsTableRef, EtsFfiError) {
-  case ets_new(name, options) {
-    Ok(table_id) -> Ok(wrap_table_ref(table_id))
-    Error(err) -> Error(err)
-  }
+) -> Result(EtsTableRef, NewTableError) {
+  ets_new(name, options)
+  |> result.map(wrap_table_ref)
 }
 
 pub fn insert(
@@ -187,10 +162,12 @@ pub fn insert(
   ets_insert(table_id, object)
 }
 
+/// Every object stored under `key`. A set table has at most one, and a bag
+/// table can have more.
 pub fn lookup(
   table: EtsTableRef,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError) {
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_lookup(table_id, key)
 }
@@ -206,14 +183,6 @@ pub fn delete_key(
 ) -> Result(Nil, EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_delete_key(table_id, key)
-}
-
-pub fn delete_object(
-  table: EtsTableRef,
-  object: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError) {
-  let table_id = unwrap_table_ref(table)
-  ets_delete_object(table_id, object)
 }
 
 pub fn delete_all_objects(table: EtsTableRef) -> Result(Nil, EtsFfiError) {
@@ -250,12 +219,24 @@ pub fn insert_new(
   ets_insert_new(table_id, object)
 }
 
+/// Remove every object stored under `key`, and return them.
 pub fn take(
   table: EtsTableRef,
   key: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, EtsFfiError) {
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   ets_take(table_id, key)
+}
+
+/// Remove the object stored under `key` and return it in a list, in one ETS
+/// call. When the key has more than one object (a bag table), the objects
+/// are put back, and the error is `SeveralObjects` with their count.
+pub fn take_one(
+  table: EtsTableRef,
+  key: dynamic.Dynamic,
+) -> Result(List(dynamic.Dynamic), EtsFfiError) {
+  let table_id = unwrap_table_ref(table)
+  ets_take_one(table_id, key)
 }
 
 pub fn update_element(
@@ -263,17 +244,31 @@ pub fn update_element(
   key: dynamic.Dynamic,
   pos: Int,
   value: dynamic.Dynamic,
-) -> Result(Nil, EtsFfiError) {
+) -> Result(Bool, EtsFfiError) {
   let table_id = unwrap_table_ref(table)
   let update_tuple = to_dynamic(#(pos, value))
   ets_update_element(table_id, key, update_tuple)
 }
 
-pub fn table_info(
+/// Add `amount` to the integer value stored under `key` and return the new
+/// value, in one ETS call (`ets:update_counter/4`). When the key is not in
+/// the table, ETS first inserts `default_object`. ETS refuses the call
+/// (`InvalidOperation`) when the value is not an integer, or when the table
+/// is a bag or duplicate_bag table.
+pub fn update_counter(
   table: EtsTableRef,
-) -> Result(List(dynamic.Dynamic), EtsFfiError) {
+  key: dynamic.Dynamic,
+  amount: Int,
+  default_object: dynamic.Dynamic,
+) -> Result(Int, EtsFfiError) {
   let table_id = unwrap_table_ref(table)
-  ets_info(table_id)
+  ets_update_counter(table_id, key, amount, default_object)
+}
+
+/// The number of objects in the table, in constant time (`ets:info/1`).
+pub fn size(table: EtsTableRef) -> Result(Int, EtsFfiError) {
+  let table_id = unwrap_table_ref(table)
+  ets_size(table_id)
 }
 
 pub fn match(
@@ -309,10 +304,8 @@ pub fn tab2file(
 }
 
 pub fn file2tab(filename: String) -> Result(EtsTableRef, EtsFfiError) {
-  case ets_file2tab(filename) {
-    Ok(table_id) -> Ok(wrap_table_ref(table_id))
-    Error(err) -> Error(err)
-  }
+  ets_file2tab(filename)
+  |> result.map(wrap_table_ref)
 }
 
 // Private helper functions

@@ -1,0 +1,3 @@
+get_profile(cache, "user:1", 1000, load_ada)       -> Ok(Profile("Ada", "pro"))
+get_profile(cache, "user:1", 1100, database_down)  -> Ok(Profile("Ada", "pro"))
+get_profile(empty, "user:1", 1000, database_down)  -> Error(LoadFailed("database is down"))
