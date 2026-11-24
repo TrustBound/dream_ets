@@ -1,6 +1,6 @@
 # dream_ets 3.0.0 Release Notes
 
-**Release Date:** not released yet (draft)
+**Release Date:** 2026-11-24
 
 This release makes `dream_ets` return an error where it crashed the calling process before, and makes its results agree with what ETS does. An operation on a deleted table returns `Error(TableNotFound)`. An ordered table gives its keys in order. A bag table key with several values can be read in full.
 
