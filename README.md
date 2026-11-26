@@ -32,7 +32,8 @@ A standalone module that gives a type-safe interface to Erlang's ETS in-memory s
 - ✅ **Pattern matching** - Advanced ETS queries and match specifications
 - ✅ **Table persistence** - Save/load tables to disk
 - ✅ **100% tested** - Comprehensive test coverage with verified examples
-- ✅ **Few dependencies** - Only `gleam_stdlib` and `gleam_erlang`, no Dream or framework
+- ✅ **Few dependencies** - Only `gleam_stdlib`, `gleam_erlang` and `dream_errors`, no Dream or framework
+- ✅ **Shared errors** - `table.to_error` maps an `EtsError` to `dream_errors.Error`, the error type of the Dream packages
 
 ## Installation
 
@@ -42,7 +43,7 @@ gleam add dream_ets
 
 ## Quick Start
 
-### Create a table and read a value back <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_first_table.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#create-a-table-and-read-a-value-back-"><img align="right" alt="Guide: Getting started" title="Guide: Getting started" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
+### Create a table and read a value back <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_first_table.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/docs/guides/getting-started.md#create-a-table-and-read-a-value-back-"><img align="right" alt="Guide: Getting started" title="Guide: Getting started" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -86,7 +87,7 @@ This module follows [Dream's design principles](https://github.com/TrustBound/dr
 
 Every code example in this README and in the guides comes from `test/snippets/` and is verified by our test suite. You can run them yourself. CI runs the same command:
 
-### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/docs/guides/getting-started.md#run-the-tests-"><img align="right" alt="Guide: Getting started" title="Guide: Getting started" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
+### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a> <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/docs/guides/getting-started.md#run-the-tests-"><img align="right" alt="Guide: Getting started" title="Guide: Getting started" src="https://img.shields.io/badge/%F0%9F%93%96_read-guide-blue.svg?style=flat-square"></a>
 
 ```bash
 gleam test

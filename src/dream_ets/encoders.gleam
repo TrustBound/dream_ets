@@ -6,7 +6,7 @@
 ////
 //// ## Quick Start
 ////
-//// ### Create tables with encoders <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L15-L40"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### Create tables with encoders <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L15-L40"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub fn create_with_encoders() -> Result(
@@ -51,7 +51,7 @@
 //// For complex or custom types, you'll need to write your own encoders/decoders.
 //// Common patterns:
 ////
-//// ### JSON Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L42-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### JSON Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L42-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub type User {
@@ -93,7 +93,7 @@
 //// }
 //// ```
 ////
-//// ### Tuple Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L80-L103"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### Tuple Encoding <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L80-L103"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub type Point {
@@ -140,7 +140,7 @@ import gleam/dynamic/decode
 ///
 /// ## Example
 ///
-/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn string_table() -> Result(option.Option(String), table.EtsError) {
@@ -173,7 +173,7 @@ pub fn string_encoder(s: String) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Use String keys and values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L105-L114"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn string_table() -> Result(option.Option(String), table.EtsError) {
@@ -210,7 +210,7 @@ pub fn string_decoder() -> decode.Decoder(String) {
 ///
 /// ## Example
 ///
-/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn int_table() -> Result(option.Option(Int), table.EtsError) {
@@ -243,7 +243,7 @@ pub fn int_encoder(i: Int) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Int values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L116-L125"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn int_table() -> Result(option.Option(Int), table.EtsError) {
@@ -279,7 +279,7 @@ pub fn int_decoder() -> decode.Decoder(Int) {
 ///
 /// ## Example
 ///
-/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn bool_table() -> Result(option.Option(Bool), table.EtsError) {
@@ -311,7 +311,7 @@ pub fn bool_encoder(b: Bool) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Bool values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L127-L136"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn bool_table() -> Result(option.Option(Bool), table.EtsError) {
@@ -347,7 +347,7 @@ pub fn bool_decoder() -> decode.Decoder(Bool) {
 ///
 /// ## Example
 ///
-/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn float_table() -> Result(option.Option(Float), table.EtsError) {
@@ -379,7 +379,7 @@ pub fn float_encoder(f: Float) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Store Float values <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_encoders.gleam#L138-L147"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn float_table() -> Result(option.Option(Float), table.EtsError) {

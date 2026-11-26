@@ -6,7 +6,7 @@
 ////
 //// ## Quick Start
 ////
-//// ### Count views and cache users <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L12-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### Count views and cache users <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L12-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub fn quick_start() -> Result(#(Int, String), table.EtsError) {
@@ -56,7 +56,7 @@ import dream_ets/table
 ///
 /// ## Example
 ///
-/// ### Count page views <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L23-L32"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Count page views <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L23-L32"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn count_page_views() -> Result(List(Int), table.EtsError) {
@@ -73,7 +73,7 @@ import dream_ets/table
 ///
 /// ## Equivalent Builder Code
 ///
-/// ### Create a counter with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L34-L41"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Create a counter with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L34-L41"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn counter_with_builder() -> Result(String, table.EtsError) {
@@ -117,7 +117,7 @@ pub fn new_counter(
 ///
 /// ## Example
 ///
-/// ### Cache a user <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L43-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Cache a user <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L43-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn cache_user() -> Result(option.Option(String), table.EtsError) {
@@ -132,7 +132,7 @@ pub fn new_counter(
 ///
 /// ## Equivalent Builder Code
 ///
-/// ### Create a string table with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L52-L60"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Create a string table with the builder <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L52-L60"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn string_table_with_builder() -> Result(String, table.EtsError) {
@@ -199,7 +199,7 @@ pub fn new_string_table(
 ///
 /// ## Example
 ///
-/// ### Count requests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L62-L72"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Count requests <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L62-L72"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn count_requests() -> Result(List(Int), table.EtsError) {
@@ -252,7 +252,7 @@ pub fn increment(
 ///
 /// ## Example
 ///
-/// ### Add points <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L74-L84"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Add points <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L74-L84"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn add_points() -> Result(List(Int), table.EtsError) {
@@ -344,7 +344,7 @@ fn refused_update_error(
 ///
 /// ## Example
 ///
-/// ### Use widgets <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L86-L96"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Use widgets <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L86-L96"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn use_widgets() -> Result(List(Int), table.EtsError) {
@@ -403,7 +403,7 @@ pub fn decrement(
 ///
 /// ## Example
 ///
-/// ### Deduct API calls <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_helpers.gleam#L98-L108"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Deduct API calls <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_helpers.gleam#L98-L108"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn deduct_api_calls() -> Result(List(Int), table.EtsError) {

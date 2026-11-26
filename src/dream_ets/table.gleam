@@ -6,7 +6,7 @@
 ////
 //// ## Quick Start
 ////
-//// ### Create tables <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L15-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### Create tables <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L15-L28"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub fn create_tables() -> Result(#(String, String), table.EtsError) {
@@ -31,6 +31,7 @@
 //// safety at compile time. The encoder/decoder functions handle conversion
 //// to/from Erlang's dynamic types for storage.
 
+import dream_errors
 import dream_ets/internal
 import gleam/dynamic
 import gleam/dynamic/decode
@@ -54,7 +55,7 @@ import gleam/result
 ///
 /// ## Example
 ///
-/// ### Use typed operations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L30-L43"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Use typed operations <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L30-L43"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn typed_operations() -> Result(option.Option(String), table.EtsError) {
@@ -113,6 +114,52 @@ pub type EtsError {
   OperationFailed(String)
 }
 
+/// Maps an `EtsError` to the shared error of the Dream packages, and keeps
+/// the `EtsError` as the cause.
+///
+/// - `TableNotFound` gives `NotFound`
+/// - `TableAlreadyExists` gives `Conflict`
+/// - `InvalidKey` and `InvalidValue` give `Invalid`
+/// - `DecodeError` and `OperationFailed` give `Failed`
+///
+/// The message is text for developers and logs, not for the users of an app.
+///
+/// ## Example
+///
+/// ### Map a lookup error to the shared error <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_to_error.gleam#L12-L18"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+///
+/// ```gleam
+/// pub fn find_name(
+///   users: table.Table(String, String),
+///   user_id: String,
+/// ) -> Result(option.Option(String), dream_errors.Error(table.EtsError)) {
+///   operations.get(users, user_id)
+///   |> result.map_error(table.to_error)
+/// }
+/// ```
+pub fn to_error(error: EtsError) -> dream_errors.Error(EtsError) {
+  case error {
+    TableNotFound ->
+      dream_errors.NotFound("the ETS table does not exist, or it was deleted")
+    TableAlreadyExists ->
+      dream_errors.Conflict("an ETS table with this name exists", error)
+    InvalidKey ->
+      dream_errors.Invalid("the table configuration has no key encoder", error)
+    InvalidValue ->
+      dream_errors.Invalid(
+        "the table configuration has no value encoder",
+        error,
+      )
+    DecodeError(_) ->
+      dream_errors.Failed(
+        "a key or value in the ETS table does not decode with the decoder of the table",
+        error,
+      )
+    OperationFailed(reason) ->
+      dream_errors.Failed("the ETS operation failed: " <> reason, error)
+  }
+}
+
 /// Get the internal table reference
 ///
 /// Returns the underlying EtsTableRef for internal operations. This is
@@ -129,7 +176,7 @@ pub type EtsError {
 ///
 /// ## Example
 ///
-/// ### Compare table references <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L45-L54"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Compare table references <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L45-L54"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn same_table_after_load(
@@ -163,7 +210,7 @@ pub fn table_ref(table: Table(k, v)) -> internal.EtsTableRef {
 ///
 /// ## Example
 ///
-/// ### Read the table name <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L56-L59"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Read the table name <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L56-L59"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn cache_name() -> Result(String, table.EtsError) {
@@ -192,7 +239,7 @@ pub fn table_name(table: Table(k, v)) -> String {
 ///
 /// ## Example
 ///
-/// ### Encode a key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L61-L64"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Encode a key <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L61-L64"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn stored_key(cache: table.Table(String, String)) -> dynamic.Dynamic {
@@ -222,7 +269,7 @@ pub fn encode_key(table: Table(k, v), key: k) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Decode a key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L66-L70"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Decode a key <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L66-L70"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn read_key(
@@ -266,7 +313,7 @@ fn extract_first_decode_error(
 ///
 /// ## Example
 ///
-/// ### Encode a value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L72-L75"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Encode a value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L72-L75"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn stored_value(cache: table.Table(String, String)) -> dynamic.Dynamic {
@@ -296,7 +343,7 @@ pub fn encode_value(table: Table(k, v), value: v) -> dynamic.Dynamic {
 ///
 /// ## Example
 ///
-/// ### Decode a value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L77-L81"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Decode a value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L77-L81"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn read_value(
@@ -344,7 +391,7 @@ fn extract_first_value_decode_error(
 ///
 /// ## Example
 ///
-/// ### Give a loaded table its types <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_table.gleam#L83-L98"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Give a loaded table its types <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_table.gleam#L83-L98"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn typed_view(

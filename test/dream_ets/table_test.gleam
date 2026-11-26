@@ -1,5 +1,6 @@
 //// Tests for `dream_ets/table`.
 
+import dream_errors
 import dream_ets/encoders
 import dream_ets/helpers
 import dream_ets/operations
@@ -175,6 +176,103 @@ pub fn tests() -> TestSuite {
         |> should
         |> be_equal(Ok("other_name"))
         |> or_fail_with("Should keep the given name")
+      }),
+    ]),
+    group("to_error", [
+      it("maps TableNotFound to NotFound", fn() {
+        // Arrange
+        let error = table.TableNotFound
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.NotFound(
+          "the ETS table does not exist, or it was deleted",
+        ))
+        |> or_fail_with("Should map TableNotFound to NotFound")
+      }),
+      it("maps TableAlreadyExists to Conflict", fn() {
+        // Arrange
+        let error = table.TableAlreadyExists
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.Conflict(
+          "an ETS table with this name exists",
+          table.TableAlreadyExists,
+        ))
+        |> or_fail_with("Should map TableAlreadyExists to Conflict")
+      }),
+      it("maps InvalidKey to Invalid", fn() {
+        // Arrange
+        let error = table.InvalidKey
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.Invalid(
+          "the table configuration has no key encoder",
+          table.InvalidKey,
+        ))
+        |> or_fail_with("Should map InvalidKey to Invalid")
+      }),
+      it("maps InvalidValue to Invalid", fn() {
+        // Arrange
+        let error = table.InvalidValue
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.Invalid(
+          "the table configuration has no value encoder",
+          table.InvalidValue,
+        ))
+        |> or_fail_with("Should map InvalidValue to Invalid")
+      }),
+      it("maps DecodeError to Failed", fn() {
+        // Arrange
+        let error = table.DecodeError(decode.DecodeError("Int", "String", []))
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.Failed(
+          "a key or value in the ETS table does not decode with the decoder of the table",
+          table.DecodeError(decode.DecodeError("Int", "String", [])),
+        ))
+        |> or_fail_with("Should map DecodeError to Failed")
+      }),
+      it("maps OperationFailed to Failed with the reason", fn() {
+        // Arrange
+        let error = table.OperationFailed("ETS refused the operation: badarg")
+
+        // Act
+        let result = table.to_error(error)
+
+        // Assert
+        result
+        |> should
+        |> be_equal(dream_errors.Failed(
+          "the ETS operation failed: ETS refused the operation: badarg",
+          table.OperationFailed("ETS refused the operation: badarg"),
+        ))
+        |> or_fail_with("Should map OperationFailed to Failed")
       }),
     ]),
   ])

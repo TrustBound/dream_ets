@@ -46,7 +46,7 @@ ETS stores Erlang terms. To store a Gleam type, give the table two functions: an
 
 The fastest encoding is an Erlang tuple. ETS copies the tuple as it is, with no text to parse on each read:
 
-### A cache table for profiles <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_entry.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A cache table for profiles <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_entry.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -101,7 +101,7 @@ Keep the encoder and the decoder next to each other, and change them together. I
 
 A cache must forget, or it serves old data forever. Store the time at which each entry goes stale, and check it on each read:
 
-### Store a profile and read it while it is fresh <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_lookup.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Store a profile and read it while it is fresh <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_lookup.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations
@@ -141,7 +141,7 @@ pub fn lookup(
 
 With an entry remembered at `now` 1000, it expires at 1300:
 
-### What lookup returns before and after 1300 <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_lookup.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What lookup returns before and after 1300 <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_caching_lookup.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 lookup(cache, "user:1", 1200)  -> Ok(Some(Profile("Ada", "pro")))
@@ -158,7 +158,7 @@ A few things to notice:
 
 Now put the cache in front of the slow source. On a hit, return the cached profile. On a miss, load it, remember it, and return it:
 
-### Read through the cache <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_read_through.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Read through the cache <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_read_through.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/table.{type EtsError, type Table}
@@ -204,7 +204,7 @@ fn load_and_remember(
 
 `get_profile` takes the loader as a function, so your program passes the real database call and your tests pass a stub. Here is what it returns, with `load_ada` a loader that returns Ada's profile and `database_down` a loader that returns `Error("database is down")`:
 
-### What get_profile returns <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_read_through.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What get_profile returns <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_caching_read_through.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 get_profile(cache, "user:1", 1000, load_ada)       -> Ok(Profile("Ada", "pro"))
@@ -220,7 +220,7 @@ The second line is the point of a cache: the database is down, but the profile w
 
 When a profile changes in the database, remove its entry, so that the next read loads the new version. You will also want to see what is in the cache, and to empty it:
 
-### Remove, list and clear entries <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_maintenance.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Remove, list and clear entries <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_maintenance.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations
@@ -266,7 +266,7 @@ pub fn clear(cache: Table(String, Entry)) -> Result(Nil, EtsError) {
 
 With two profiles cached, for `user:1` and `user:2`:
 
-### What the maintenance functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_maintenance.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What the maintenance functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_caching_maintenance.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 cached_user_ids(cache)                           -> Ok(["user:1", "user:2"])
@@ -288,7 +288,7 @@ Know what each of these costs:
 
 A cache in a web server is read by many request processes at the same time, and written much less often. Tell ETS so when you create the table:
 
-### A profile cache for many readers <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_settings.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A profile cache for many readers <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_settings.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -335,7 +335,7 @@ The tuple encoding of Step 1 is the fastest, but it is not the only way. Pick by
 
 Here is the JSON way. dream_ets does not depend on `gleam_json`, so add it to your project first with `gleam add gleam_json`:
 
-### Store a user as a JSON string <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/custom_types.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Store a user as a JSON string <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/custom_types.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -413,7 +413,7 @@ The failure you will meet most in a cache is an entry that does not decode. A `D
 
 When an older version stored a plain `String` where the cache now expects an `Entry` tuple, `operations.get(cache, "user:1")` returns:
 
-### The error for an entry in an old format <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_caching_decode_error.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### The error for an entry in an old format <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_caching_decode_error.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 Error(DecodeError(DecodeError("Indexable", "String", [])))
@@ -427,7 +427,7 @@ The other errors are the ones every table has: `TableNotFound` when the owner pr
 
 Because `lookup` and `get_profile` take the time and the loader as parameters, a test controls both. Make a table with a name of its own, put an entry in it at a fixed time, and read at another time. Tests often run at the same time, and table names are global, so each test gets its own table name. This module uses [dream_test](https://hexdocs.pm/dream_test), which [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md#test-your-code) shows how to add:
 
-### Test the cache with fixed times and a stub loader <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_caching_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Test the cache with fixed times and a stub loader <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_caching_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_test/matchers.{be_equal, or_fail_with, should}

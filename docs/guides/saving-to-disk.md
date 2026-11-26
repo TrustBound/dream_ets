@@ -41,7 +41,7 @@ A loaded table belongs to the process that loads it, the same as a created one. 
 
 `operations.save_to_file(table, path)` writes every entry of the table to the file, and returns `Ok(Nil)`:
 
-### Save a table to a file <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_saving_save.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Save a table to a file <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_saving_save.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -70,7 +70,7 @@ The file uses the Erlang `ets:tab2file` format. It stores the table name, the ta
 
 `operations.load_from_file(path)` reads the file and creates the table again, with the name and the entries it had. It returns a raw table reference, because the file does not know your Gleam types. `table.new_table` gives the loaded table its types:
 
-### Load a saved table, or start empty <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_saving_load.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Load a saved table, or start empty <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_saving_load.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -134,7 +134,7 @@ There are two functions here, for two jobs:
 
 Now put the pieces together. This function stores a value, saves, deletes the table as a stop of the program would, and loads again:
 
-### Keep a value across a restart <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_saving_restart.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Keep a value across a restart <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_saving_restart.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -198,7 +198,7 @@ The last one is the quiet failure. When the file came from a counter table and y
 
 Test your start-up code with files under `build/`, and with a name of its own for each test's table. Tests often run at the same time, and table names are global. This test module uses [dream_test](https://hexdocs.pm/dream_test), which [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md#test-your-code) shows how to add:
 
-### Test the first start with no file <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_saving_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Test the first start with no file <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_saving_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations

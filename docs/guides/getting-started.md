@@ -42,7 +42,7 @@ Each example in this guide is a complete module. Put it in `src/`, call its publ
 
 You create a table with the builder in `dream_ets/config`. Start with `config.new(name)`, say how to store the keys and the values, and call `config.create()`. Then use the functions in `dream_ets/operations` to store and read values:
 
-### Create a table and read a value back <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_first_table.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Create a table and read a value back <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_first_table.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -81,7 +81,7 @@ Two more operations that you will use all the time: `operations.delete(table, ke
 
 A `Table` value is only a reference to the ETS table. You can pass it to any process, and every process reads and writes the same data. This function starts three processes that each write one key at the same time:
 
-### Write to one table from three processes <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_share.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Write to one table from three processes <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_share.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations
@@ -119,7 +119,7 @@ Each `set` is one ETS operation, so writes from different processes never mix up
 
 Every ETS table has an owner: the process that created it. **When the owner process stops, ETS deletes the table**, with all its data. This catches people out, because a table works fine until the process that made it finishes. Here is a table created in a process that stops right away:
 
-### A table goes away with its owner <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_owner.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A table goes away with its owner <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_owner.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -153,7 +153,7 @@ fn read_after_owner_stopped(
 
 So create your tables in a process that runs as long as your program does. The usual place is `main`, before you start your web server or your workers. Create them all in one function, keep them in a record, and pass the record to the code that needs them:
 
-### Create the tables of a program at start-up <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_tables.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Create the tables of a program at start-up <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_tables.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -201,7 +201,7 @@ If a supervised process owns a table and the supervisor restarts it, the new pro
 
 `key_string()` and `value_string()` are shortcuts. For other types, give `config.key` and `config.value` an encoder (a function from your type to `Dynamic`) and a decoder (a `Decoder` back to your type). `dream_ets/encoders` has both for `String`, `Int`, `Float` and `Bool`:
 
-### A table of prices by product id <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_types.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A table of prices by product id <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_types.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -243,7 +243,7 @@ The encoder runs on each write and the decoder on each read. A decoder that fail
 
 Every function returns `Error` instead of crashing your process. This function turns each result of a lookup into a message for your log:
 
-### Turn each result of a lookup into a message <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_errors.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Turn each result of a lookup into a message <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_errors.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations
@@ -278,20 +278,22 @@ Here is what each error means, and what you will see:
 
 The [Settings and errors reference](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/settings-and-errors.md) lists which function returns which error.
 
+If your app also uses other Dream packages, `table.to_error` maps an `EtsError` to `dream_errors.Error`, the error type that these packages share. The [Settings and errors reference](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/settings-and-errors.md#the-shared-error-type) shows the mapping.
+
 ## Test your code
 
 Write your functions so that they take a table as a parameter, as `greet` does. Then each test can make its own tables, put the data it needs in them, and call your function. Tests often run at the same time, and table names are global to the Erlang node, so give each test's tables their own names.
 
 This test module uses [dream_test](https://hexdocs.pm/dream_test). Add it as a dev dependency first, with the same version range that this package tests with. These are the lines of this package's own `gleam.toml`:
 
-### The dream_test dev dependency <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/gleam.toml#L25-L26"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### The dream_test dev dependency <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/gleam.toml#L26-L27"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```toml
 [dev-dependencies]
 dream_test = ">= 3.0.0 and < 4.0.0"
 ```
 
-### Test greet with tables made for each test <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_getting_started_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Test greet with tables made for each test <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_getting_started_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -350,7 +352,7 @@ Each test builds a `Tables` record from tables with names of its own, so the two
 
 Run the tests with `gleam test`. CI runs the tests of this package with the same command:
 
-### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Run the tests <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/scripts/check.sh#L8"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```bash
 gleam test

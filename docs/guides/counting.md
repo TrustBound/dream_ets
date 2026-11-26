@@ -42,7 +42,7 @@ A table lives as long as the process that created it. Create your counters in a 
 
 A counter table has `String` keys and `Int` values. `helpers.new_counter(name)` creates one, and `helpers.increment(table, key)` adds one to a key:
 
-### Count page views and read the counts <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_counting_page_views.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Count page views and read the counts <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_counting_page_views.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -93,7 +93,7 @@ A few things to know about `increment`:
 
 The module in Step 1 also has two readers. `views_of` reads one count, and turns a missing key into 0. `report` reads every count and sorts them by path:
 
-### What the readers return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_counting_readers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What the readers return <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_counting_readers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 views_of(views, "/pricing")  -> Ok(0)
@@ -108,7 +108,7 @@ A web server handles each request in its own process, so many processes count th
 
 This function starts ten processes. Each one adds one to the same key 1000 times, at the same time as the others:
 
-### Ten processes increment one key at the same time <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_counting_many_processes.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Ten processes increment one key at the same time <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_counting_many_processes.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -156,7 +156,7 @@ Sometimes only one part of your program may change the counts. Maybe the counts 
 
 ETS has an access mode made for this: `protected`. The owner process writes, and every process reads. If you create the table inside the counter process, ETS itself refuses writes from any other process, so no code can skip the counter by mistake:
 
-### A counter process that owns the table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_counting_counter_process.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A counter process that owns the table <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_counting_counter_process.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -234,7 +234,7 @@ Every increment is now a message and a reply, so it costs more than a direct `he
 
 Counts also make quotas. Here each user can spend 100 credits a day. A request adds its cost, and if the total goes over the limit, the request gives the credits back and fails:
 
-### Spend credits from a daily quota <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_counting_quota.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Spend credits from a daily quota <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_counting_quota.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -294,7 +294,7 @@ pub fn refund_one(
 
 For a new user:
 
-### What spend and refund_one return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_counting_quota.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What spend and refund_one return <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_counting_quota.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 spend(spent, "user:1", 30)   -> Ok(70)
@@ -340,7 +340,7 @@ To start a new day, empty the table with `operations.delete_all_objects(spent)`.
 
 The tests that matter for counters are the concurrent ones: start many processes, let each count or spend, wait for all of them, and check the exact total. This test module uses [dream_test](https://hexdocs.pm/dream_test), which [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md#test-your-code) shows how to add:
 
-### Test the counter and the quota with ten processes <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_counting_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Test the counter and the quota with ten processes <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_counting_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers

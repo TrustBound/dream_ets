@@ -5,7 +5,7 @@
 ////
 //// ## Quick Start
 ////
-//// ### Set, get and delete <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L16-L25"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+//// ### Set, get and delete <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L16-L25"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ////
 //// ```gleam
 //// pub fn crud() -> Result(option.Option(String), table.EtsError) {
@@ -119,7 +119,7 @@ import gleam/result
 ///
 /// ## Example
 ///
-/// ### Set and replace a value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L27-L33"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Set and replace a value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L27-L33"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn set_twice(
@@ -169,7 +169,7 @@ pub fn set(
 ///
 /// ## Example
 ///
-/// ### Handle each lookup result <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L35-L44"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Handle each lookup result <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L35-L44"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn describe_user(
@@ -225,7 +225,7 @@ pub fn get(
 ///
 /// ## Example
 ///
-/// ### Read every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L256-L263"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Read every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L256-L263"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn tags_of_post(
@@ -278,7 +278,7 @@ pub fn get_all(
 ///
 /// ## Example
 ///
-/// ### Delete a key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L46-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Delete a key <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L46-L50"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn remove_user(
@@ -318,7 +318,7 @@ pub fn delete(table: table.Table(k, v), key: k) -> Result(Nil, table.EtsError) {
 ///
 /// ## Example
 ///
-/// ### Check whether a user exists <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_member.gleam#L11-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Check whether a user exists <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_member.gleam#L11-L21"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn describe_user(
@@ -374,7 +374,7 @@ pub fn member(
 ///
 /// ## Example
 ///
-/// ### Delete a table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L52-L56"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Delete a table <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L52-L56"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn drop_table(
@@ -414,7 +414,7 @@ pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
 ///
 /// ## Example
 ///
-/// ### Show the table size <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L58-L63"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Show the table size <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L58-L63"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn describe_size(users: table.Table(String, String)) -> String {
@@ -457,7 +457,7 @@ pub fn size(table: table.Table(k, v)) -> Result(Int, table.EtsError) {
 ///
 /// ## Example
 ///
-/// ### List the keys <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L65-L70"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### List the keys <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L65-L70"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn list_keys(users: table.Table(String, String)) -> List(String) {
@@ -495,7 +495,7 @@ pub fn keys(table: table.Table(k, v)) -> Result(List(k), table.EtsError) {
 ///
 /// ## Example
 ///
-/// ### Use every value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L72-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Use every value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L72-L78"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn count_characters(users: table.Table(String, String)) -> Int {
@@ -533,7 +533,7 @@ pub fn values(table: table.Table(k, v)) -> Result(List(v), table.EtsError) {
 ///
 /// ## Example
 ///
-/// ### List the pairs <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L80-L85"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### List the pairs <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L80-L85"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn list_pairs(users: table.Table(String, String)) -> List(String) {
@@ -574,7 +574,7 @@ pub fn to_list(
 ///
 /// ## Example
 ///
-/// ### Create a user once <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L87-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Create a user once <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L87-L93"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn create_user(users: table.Table(String, String)) -> String {
@@ -588,7 +588,7 @@ pub fn to_list(
 ///
 /// ## Use Cases
 ///
-/// ### Preventing Duplicate Registrations <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L95-L105"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Preventing Duplicate Registrations <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L95-L105"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn register_user(
@@ -604,7 +604,7 @@ pub fn to_list(
 /// }
 /// ```
 ///
-/// ### Distributed Locks <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L107-L117"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Distributed Locks <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L107-L117"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn acquire_lock(
@@ -622,7 +622,7 @@ pub fn to_list(
 ///
 /// ## Why Not Use `member()` + `set()`?
 ///
-/// ### Member and set, compared with insert_new <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_insert_new_race.gleam#L10-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Member and set, compared with insert_new <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_insert_new_race.gleam#L10-L30"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// // Race condition: another process can insert the key between the two calls
@@ -687,7 +687,7 @@ pub fn insert_new(
 ///
 /// ## Example
 ///
-/// ### Take a job <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L119-L126"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Take a job <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L119-L126"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn take_job(jobs: table.Table(String, String)) -> String {
@@ -702,7 +702,7 @@ pub fn insert_new(
 ///
 /// ## Use Cases
 ///
-/// ### Work Queue <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L128-L139"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Work Queue <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L128-L139"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn claim_next_job(
@@ -719,7 +719,7 @@ pub fn insert_new(
 /// }
 /// ```
 ///
-/// ### Cache Eviction <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L141-L150"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Cache Eviction <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L141-L150"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn evict_entry(
@@ -734,7 +734,7 @@ pub fn insert_new(
 /// }
 /// ```
 ///
-/// ### Token Consumption <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L152-L162"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Token Consumption <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L152-L162"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn use_token(
@@ -752,7 +752,7 @@ pub fn insert_new(
 ///
 /// ## Why Not Use `get()` + `delete()`?
 ///
-/// ### get and delete, compared with take <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L164-L180"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### get and delete, compared with take <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L164-L180"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// // Race condition: another process can change the value between get and delete
@@ -820,7 +820,7 @@ pub fn take(
 ///
 /// ## Example
 ///
-/// ### Remove every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L265-L270"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Remove every value of a bag key <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L265-L270"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn remove_tags(
@@ -876,7 +876,7 @@ pub fn take_all(
 ///
 /// ## Example
 ///
-/// ### Replace a value in place <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L182-L194"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Replace a value in place <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L182-L194"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn replace_value(
@@ -932,7 +932,7 @@ pub fn update_element(
 ///
 /// ## Example
 ///
-/// ### Clear a cache <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L196-L203"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Clear a cache <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L196-L203"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn clear_cache(
@@ -981,7 +981,7 @@ pub fn delete_all_objects(
 ///
 /// ## Example
 ///
-/// ### Bind the key and the value of each object <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L205-L215"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Bind the key and the value of each object <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L205-L215"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn match_pairs(
@@ -1033,7 +1033,7 @@ pub fn match(
 ///
 /// ## Example
 ///
-/// ### Find the objects with one value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L217-L224"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Find the objects with one value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L217-L224"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn match_alice(
@@ -1082,7 +1082,7 @@ pub fn match_object(
 ///
 /// ## Example
 ///
-/// ### Select every value <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L226-L242"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Select every value <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L226-L242"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn select_values(
@@ -1140,7 +1140,7 @@ pub fn select(
 ///
 /// ## Example
 ///
-/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn save_and_load(
@@ -1190,7 +1190,7 @@ pub fn save_to_file(
 ///
 /// ## Example
 ///
-/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+/// ### Save a table and load it again <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/doc_operations.gleam#L244-L254"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 ///
 /// ```gleam
 /// pub fn save_and_load(

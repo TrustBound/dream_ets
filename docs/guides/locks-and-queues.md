@@ -42,7 +42,7 @@ A lock is a key in a table. The process that stores the key first holds the lock
 
 The obvious way, `member` to check and then `set` to store, is wrong. Two processes can both call `member`, both get `Ok(False)`, and both store the key. `operations.insert_new` does the check and the store in one ETS operation: it stores the key only if it is not there, and tells you which happened.
 
-### Take, release and check a lock <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_lock.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Take, release and check a lock <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_lock.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/operations
@@ -84,7 +84,7 @@ pub fn is_locked(
 
 With an empty `locks` table:
 
-### What the lock functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_locks_lock.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What the lock functions return <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_locks_lock.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 try_lock(locks, "report:42", "worker:1")  -> Ok(True)
@@ -104,7 +104,7 @@ Here is why each function is written this way:
 
 The point of `insert_new` is what happens under a race. This function starts five processes that try to take the same lock at the same moment, and returns the owners that got it:
 
-### Five processes race for one lock <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_race.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Five processes race for one lock <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_race.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers
@@ -145,7 +145,7 @@ pub fn five_processes_race() -> Result(List(String), EtsError) {
 
 A queue needs two things: an order, and a way for each job to go to one worker only. An `ordered_set` table gives the order: it keeps its keys sorted, and `operations.keys` returns them in ascending order. `operations.take` gives the rest: it reads a key and removes it in one ETS operation, so when two workers take the same job, one gets `Some(job)` and the other gets `None`.
 
-### A work queue in an ordered table <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_queue.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### A work queue in an ordered table <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_queue.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -211,7 +211,7 @@ fn claimed_or_next(
 
 Use job ids that sort in the order you want, such as a zero-padded number or a timestamp. Now let three workers empty a queue of ten jobs at the same time:
 
-### Three workers empty the queue <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_workers.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Three workers empty the queue <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_workers.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/table.{type EtsError, type Table}
@@ -258,7 +258,7 @@ fn claim_all(
 
 `three_workers_empty_the_queue()` returns every job id exactly once:
 
-### What the three workers claim <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/outputs/guide_locks_workers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### What the three workers claim <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/outputs/guide_locks_workers.txt"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```text
 Ok(["job:001", "job:002", "job:003", "job:004", "job:005", "job:006", "job:007", "job:008", "job:009", "job:010"])
@@ -272,7 +272,7 @@ Which worker got which job changes from run to run, but no job is missing and no
 
 Sometimes you collect many values under one key and handle them together: the notifications for a user, sent as one digest email. A `set` table keeps one value per key, so a second `set` replaces the first. A `bag` or `duplicate_bag` table keeps them all:
 
-### An outbox that collects messages per user <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_outbox.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### An outbox that collects messages per user <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_outbox.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/config
@@ -349,7 +349,7 @@ A few things are different in a bag table:
 
 Test your lock and queue code in two ways: the single-process rules with plain calls, and the race with real processes, as Step 2 and Step 3 do. Here is a test module for `unlock`. It uses [dream_test](https://hexdocs.pm/dream_test), which [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md#test-your-code) shows how to add:
 
-### Test that unlock only releases its own lock <a href="https://github.com/TrustBound/dream_ets/blob/3.0.0/test/snippets/guide_locks_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
+### Test that unlock only releases its own lock <a href="https://github.com/TrustBound/dream_ets/blob/3.1.0/test/snippets/guide_locks_testing.gleam"><img align="right" alt="Tested snippet" src="https://img.shields.io/badge/%F0%9F%A7%AA_tested-snippet-lightgreen.svg?style=flat-square"></a>
 
 ```gleam
 import dream_ets/helpers

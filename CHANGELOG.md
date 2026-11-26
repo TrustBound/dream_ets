@@ -5,6 +5,21 @@ All notable changes to `dream_ets` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-11-26
+
+### Added
+
+- `table.to_error(error)` maps an `EtsError` to `dream_errors.Error(EtsError)`, the error type that the Dream packages share. `TableNotFound` gives `NotFound`, `TableAlreadyExists` gives `Conflict`, `InvalidKey` and `InvalidValue` give `Invalid`, and `DecodeError` and `OperationFailed` give `Failed`. Each one keeps the `EtsError` as the cause, except `NotFound`, which has no cause. The message is text for developers and logs.
+- `dream_errors` (`>= 1.0.0 and < 2.0.0`) is a new dependency.
+
+### Documentation
+
+- The Settings and errors reference shows the mapping of each `EtsError`, and the Getting started guide links to it.
+
+### Testing
+
+- 344 tests, 0 failed, in 0.39 to 0.60 seconds over two runs, with the coverage report on (380/380 lines of `src/`, 100%). Apple M1 Max, 10 cores, 64 GB, macOS 26.5.1, OTP 29, Gleam 1.19.2.
+
 ## [3.0.0] - 2026-11-24
 
 ### Fixed

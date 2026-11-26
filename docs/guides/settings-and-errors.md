@@ -97,6 +97,21 @@ The texts of `OperationFailed` that you will meet:
 
 [Getting started](https://github.com/TrustBound/dream_ets/blob/main/docs/guides/getting-started.md#when-something-goes-wrong) shows a function that handles each error of a lookup.
 
+### The shared error type
+
+`table.to_error` maps an `EtsError` to `dream_errors.Error(EtsError)`, the error type that the Dream packages share. An app can then handle the errors of several packages with one type. The `EtsError` stays whole as the cause, except for `NotFound`, which has no cause.
+
+| `EtsError` | `dream_errors.Error` | Message |
+|:---|:---|:---|
+| `TableNotFound` | `NotFound` | `the ETS table does not exist, or it was deleted` |
+| `TableAlreadyExists` | `Conflict` | `an ETS table with this name exists` |
+| `InvalidKey` | `Invalid` | `the table configuration has no key encoder` |
+| `InvalidValue` | `Invalid` | `the table configuration has no value encoder` |
+| `DecodeError(error)` | `Failed` | `a key or value in the ETS table does not decode with the decoder of the table` |
+| `OperationFailed(reason)` | `Failed` | `the ETS operation failed: ` and the reason |
+
+The message is text for developers and logs. Do not show it to the users of an app.
+
 ## What each operation costs
 
 | Operations | Cost |
