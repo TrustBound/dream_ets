@@ -31,7 +31,7 @@
 //// safety at compile time. The encoder/decoder functions handle conversion
 //// to/from Erlang's dynamic types for storage.
 
-import dream_errors
+import dream_errors.{type Error, Conflict, Failed, Invalid, NotFound}
 import dream_ets/internal
 import gleam/dynamic
 import gleam/dynamic/decode
@@ -130,33 +130,27 @@ pub type EtsError {
 ///
 /// ```gleam
 /// pub fn find_name(
-///   users: table.Table(String, String),
+///   users: Table(String, String),
 ///   user_id: String,
-/// ) -> Result(option.Option(String), dream_errors.Error(table.EtsError)) {
-///   operations.get(users, user_id)
-///   |> result.map_error(table.to_error)
+/// ) -> Result(Option(String), Error(EtsError)) {
+///   get(users, user_id)
+///   |> map_error(to_error)
 /// }
 /// ```
-pub fn to_error(error: EtsError) -> dream_errors.Error(EtsError) {
+pub fn to_error(error: EtsError) -> Error(EtsError) {
   case error {
-    TableNotFound ->
-      dream_errors.NotFound("the ETS table does not exist, or it was deleted")
-    TableAlreadyExists ->
-      dream_errors.Conflict("an ETS table with this name exists", error)
-    InvalidKey ->
-      dream_errors.Invalid("the table configuration has no key encoder", error)
+    TableNotFound -> NotFound("the ETS table does not exist, or it was deleted")
+    TableAlreadyExists -> Conflict("an ETS table with this name exists", error)
+    InvalidKey -> Invalid("the table configuration has no key encoder", error)
     InvalidValue ->
-      dream_errors.Invalid(
-        "the table configuration has no value encoder",
-        error,
-      )
+      Invalid("the table configuration has no value encoder", error)
     DecodeError(_) ->
-      dream_errors.Failed(
+      Failed(
         "a key or value in the ETS table does not decode with the decoder of the table",
         error,
       )
     OperationFailed(reason) ->
-      dream_errors.Failed("the ETS operation failed: " <> reason, error)
+      Failed("the ETS operation failed: " <> reason, error)
   }
 }
 

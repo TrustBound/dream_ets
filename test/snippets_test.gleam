@@ -1,14 +1,14 @@
 //// Tests of the snippets that the docs show and that no other test module
 //// runs. Each test checks the exact result of one snippet.
 
-import dream_errors
+import dream_errors.{NotFound}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
 import snippets/custom_types
 import snippets/doc_insert_new_race
 import snippets/doc_member
-import snippets/doc_to_error
+import snippets/doc_to_error.{find_name_in_deleted_table}
 
 pub fn tests() -> TestSuite {
   describe("snippets", [
@@ -50,15 +50,13 @@ pub fn tests() -> TestSuite {
     }),
     it("to_error doc maps a lookup on a deleted table to NotFound", fn() {
       // Act
-      let result = doc_to_error.find_name_in_deleted_table()
+      let result = find_name_in_deleted_table()
 
       // Assert
       result
       |> should
       |> be_equal(
-        Error(dream_errors.NotFound(
-          "the ETS table does not exist, or it was deleted",
-        )),
+        Error(NotFound("the ETS table does not exist, or it was deleted")),
       )
       |> or_fail_with("Should map the lookup error to NotFound")
     }),

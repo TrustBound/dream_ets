@@ -28,11 +28,11 @@ Each error keeps the `EtsError` as the cause, except `NotFound`, which has no ca
 
 ```gleam
 pub fn find_name(
-  users: table.Table(String, String),
+  users: Table(String, String),
   user_id: String,
-) -> Result(option.Option(String), dream_errors.Error(table.EtsError)) {
-  operations.get(users, user_id)
-  |> result.map_error(table.to_error)
+) -> Result(Option(String), Error(EtsError)) {
+  get(users, user_id)
+  |> map_error(to_error)
 }
 ```
 

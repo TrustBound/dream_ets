@@ -2,26 +2,23 @@
 ////
 //// Maps the error of a lookup to the shared error of the Dream packages.
 
-import dream_errors
-import dream_ets/helpers
-import dream_ets/operations
-import dream_ets/table
-import gleam/option
-import gleam/result
+import dream_errors.{type Error}
+import dream_ets/helpers.{new_string_table}
+import dream_ets/operations.{delete_table, get}
+import dream_ets/table.{type EtsError, type Table, to_error}
+import gleam/option.{type Option}
+import gleam/result.{map_error}
 
 pub fn find_name(
-  users: table.Table(String, String),
+  users: Table(String, String),
   user_id: String,
-) -> Result(option.Option(String), dream_errors.Error(table.EtsError)) {
-  operations.get(users, user_id)
-  |> result.map_error(table.to_error)
+) -> Result(Option(String), Error(EtsError)) {
+  get(users, user_id)
+  |> map_error(to_error)
 }
 
-pub fn find_name_in_deleted_table() -> Result(
-  option.Option(String),
-  dream_errors.Error(table.EtsError),
-) {
-  let assert Ok(users) = helpers.new_string_table("doc_to_error_users")
-  let assert Ok(Nil) = operations.delete_table(users)
+pub fn find_name_in_deleted_table() -> Result(Option(String), Error(EtsError)) {
+  let assert Ok(users) = new_string_table("doc_to_error_users")
+  let assert Ok(Nil) = delete_table(users)
   find_name(users, "user:123")
 }

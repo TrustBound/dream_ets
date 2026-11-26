@@ -1,10 +1,13 @@
 //// Tests for `dream_ets/table`.
 
-import dream_errors
+import dream_errors.{Conflict, Failed, Invalid, NotFound}
 import dream_ets/encoders
 import dream_ets/helpers
 import dream_ets/operations
-import dream_ets/table
+import dream_ets/table.{
+  DecodeError, InvalidKey, InvalidValue, OperationFailed, TableAlreadyExists,
+  TableNotFound, to_error,
+}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, group, it}
@@ -181,96 +184,94 @@ pub fn tests() -> TestSuite {
     group("to_error", [
       it("maps TableNotFound to NotFound", fn() {
         // Arrange
-        let error = table.TableNotFound
+        let error = TableNotFound
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.NotFound(
-          "the ETS table does not exist, or it was deleted",
-        ))
+        |> be_equal(NotFound("the ETS table does not exist, or it was deleted"))
         |> or_fail_with("Should map TableNotFound to NotFound")
       }),
       it("maps TableAlreadyExists to Conflict", fn() {
         // Arrange
-        let error = table.TableAlreadyExists
+        let error = TableAlreadyExists
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.Conflict(
+        |> be_equal(Conflict(
           "an ETS table with this name exists",
-          table.TableAlreadyExists,
+          TableAlreadyExists,
         ))
         |> or_fail_with("Should map TableAlreadyExists to Conflict")
       }),
       it("maps InvalidKey to Invalid", fn() {
         // Arrange
-        let error = table.InvalidKey
+        let error = InvalidKey
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.Invalid(
+        |> be_equal(Invalid(
           "the table configuration has no key encoder",
-          table.InvalidKey,
+          InvalidKey,
         ))
         |> or_fail_with("Should map InvalidKey to Invalid")
       }),
       it("maps InvalidValue to Invalid", fn() {
         // Arrange
-        let error = table.InvalidValue
+        let error = InvalidValue
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.Invalid(
+        |> be_equal(Invalid(
           "the table configuration has no value encoder",
-          table.InvalidValue,
+          InvalidValue,
         ))
         |> or_fail_with("Should map InvalidValue to Invalid")
       }),
       it("maps DecodeError to Failed", fn() {
         // Arrange
-        let error = table.DecodeError(decode.DecodeError("Int", "String", []))
+        let error = DecodeError(decode.DecodeError("Int", "String", []))
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.Failed(
+        |> be_equal(Failed(
           "a key or value in the ETS table does not decode with the decoder of the table",
-          table.DecodeError(decode.DecodeError("Int", "String", [])),
+          DecodeError(decode.DecodeError("Int", "String", [])),
         ))
         |> or_fail_with("Should map DecodeError to Failed")
       }),
       it("maps OperationFailed to Failed with the reason", fn() {
         // Arrange
-        let error = table.OperationFailed("ETS refused the operation: badarg")
+        let error = OperationFailed("ETS refused the operation: badarg")
 
         // Act
-        let result = table.to_error(error)
+        let result = to_error(error)
 
         // Assert
         result
         |> should
-        |> be_equal(dream_errors.Failed(
+        |> be_equal(Failed(
           "the ETS operation failed: ETS refused the operation: badarg",
-          table.OperationFailed("ETS refused the operation: badarg"),
+          OperationFailed("ETS refused the operation: badarg"),
         ))
         |> or_fail_with("Should map OperationFailed to Failed")
       }),
