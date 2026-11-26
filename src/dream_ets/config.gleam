@@ -59,14 +59,21 @@
 //// Tables are parameterized by key and value types. The type system
 //// ensures you cannot insert wrong types into a table.
 
-import dream_ets/encoders
-import dream_ets/internal
-import dream_ets/table
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/erlang/atom
-import gleam/option
-import gleam/result
+import dream_ets/encoders.{
+  int_decoder, int_encoder, string_decoder, string_encoder,
+}
+import dream_ets/internal.{
+  type NewTableError, NameInUse, OptionsRejected, to_dynamic,
+}
+import dream_ets/table.{
+  type EtsError, type Table, InvalidKey, InvalidValue, OperationFailed,
+  TableAlreadyExists,
+}
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode.{type Decoder}
+import gleam/erlang/atom.{type Atom}
+import gleam/option.{type Option, None, Some}
+import gleam/result.{map, map_error, try}
 
 /// Table configuration builder
 ///
@@ -85,10 +92,10 @@ pub opaque type TableConfig(key, value) {
     read_concurrency: Bool,
     write_concurrency: Bool,
     compressed: Bool,
-    key_encoder: option.Option(fn(key) -> dynamic.Dynamic),
-    key_decoder: option.Option(decode.Decoder(key)),
-    value_encoder: option.Option(fn(value) -> dynamic.Dynamic),
-    value_decoder: option.Option(decode.Decoder(value)),
+    key_encoder: Option(fn(key) -> Dynamic),
+    key_decoder: Option(Decoder(key)),
+    value_encoder: Option(fn(value) -> Dynamic),
+    value_decoder: Option(Decoder(value)),
   )
 }
 
@@ -380,10 +387,10 @@ pub fn new(name: String) -> TableConfig(k, v) {
     read_concurrency: False,
     write_concurrency: False,
     compressed: False,
-    key_encoder: option.None,
-    key_decoder: option.None,
-    value_encoder: option.None,
-    value_decoder: option.None,
+    key_encoder: None,
+    key_decoder: None,
+    value_encoder: None,
+    value_decoder: None,
   )
 }
 
@@ -810,8 +817,8 @@ pub fn compressed(
 /// - `value()` - Set value encoder/decoder
 pub fn key(
   config: TableConfig(k, v),
-  encoder: fn(k) -> dynamic.Dynamic,
-  decoder: decode.Decoder(k),
+  encoder: fn(k) -> Dynamic,
+  decoder: Decoder(k),
 ) -> TableConfig(k, v) {
   let TableConfig(
     name,
@@ -833,8 +840,8 @@ pub fn key(
     read_concurrency: read_concurrency,
     write_concurrency: write_concurrency,
     compressed: compressed,
-    key_encoder: option.Some(encoder),
-    key_decoder: option.Some(decoder),
+    key_encoder: Some(encoder),
+    key_decoder: Some(decoder),
     value_encoder: value_encoder,
     value_decoder: value_decoder,
   )
@@ -925,8 +932,8 @@ pub fn key(
 /// - `key()` - Set key encoder/decoder
 pub fn value(
   config: TableConfig(k, v),
-  encoder: fn(v) -> dynamic.Dynamic,
-  decoder: decode.Decoder(v),
+  encoder: fn(v) -> Dynamic,
+  decoder: Decoder(v),
 ) -> TableConfig(k, v) {
   let TableConfig(
     name,
@@ -950,8 +957,8 @@ pub fn value(
     compressed: compressed,
     key_encoder: key_encoder,
     key_decoder: key_decoder,
-    value_encoder: option.Some(encoder),
-    value_decoder: option.Some(decoder),
+    value_encoder: Some(encoder),
+    value_decoder: Some(decoder),
   )
 }
 
@@ -987,7 +994,7 @@ pub fn value(
 /// - `value_string()` - For string values
 pub fn key_string(config: TableConfig(String, v)) -> TableConfig(String, v) {
   config
-  |> key(encoders.string_encoder, encoders.string_decoder())
+  |> key(string_encoder, string_decoder())
 }
 
 /// Convenience: Set string value encoding
@@ -1022,7 +1029,7 @@ pub fn key_string(config: TableConfig(String, v)) -> TableConfig(String, v) {
 /// - `key_string()` - For string keys
 pub fn value_string(config: TableConfig(k, String)) -> TableConfig(k, String) {
   config
-  |> value(encoders.string_encoder, encoders.string_decoder())
+  |> value(string_encoder, string_decoder())
 }
 
 /// Convenience: Configure as counter table (String keys, Int values)
@@ -1065,7 +1072,7 @@ pub fn value_string(config: TableConfig(k, String)) -> TableConfig(k, String) {
 pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
   config
   |> key_string()
-  |> value(encoders.int_encoder, encoders.int_decoder())
+  |> value(int_encoder, int_decoder())
 }
 
 /// Create the table from configuration
@@ -1128,11 +1135,9 @@ pub fn counter(config: TableConfig(String, Int)) -> TableConfig(String, Int) {
 ///
 /// - `new()` - Start the builder
 /// - `key_string()` / `value_string()` - Common encoder shortcuts
-pub fn create(
-  config: TableConfig(k, v),
-) -> Result(table.Table(k, v), table.EtsError) {
-  use validated_config <- result.try(validate_config(config))
-  use options <- result.try(build_ets_options(validated_config))
+pub fn create(config: TableConfig(k, v)) -> Result(Table(k, v), EtsError) {
+  use validated_config <- try(validate_config(config))
+  use options <- try(build_ets_options(validated_config))
   create_table_with_options(validated_config, options)
 }
 
@@ -1140,7 +1145,7 @@ pub fn create(
 
 fn validate_config(
   config: TableConfig(k, v),
-) -> Result(TableConfig(k, v), table.EtsError) {
+) -> Result(TableConfig(k, v), EtsError) {
   let TableConfig(
     _,
     _,
@@ -1155,26 +1160,25 @@ fn validate_config(
   ) = config
 
   case key_encoder {
-    option.None -> Error(table.InvalidKey)
-    option.Some(_) ->
-      validate_value_encoding(config, value_encoder, value_decoder)
+    None -> Error(InvalidKey)
+    Some(_) -> validate_value_encoding(config, value_encoder, value_decoder)
   }
 }
 
 fn validate_value_encoding(
   config: TableConfig(k, v),
-  value_encoder: option.Option(fn(v) -> dynamic.Dynamic),
-  _value_decoder: option.Option(decode.Decoder(v)),
-) -> Result(TableConfig(k, v), table.EtsError) {
+  value_encoder: Option(fn(v) -> Dynamic),
+  _value_decoder: Option(Decoder(v)),
+) -> Result(TableConfig(k, v), EtsError) {
   case value_encoder {
-    option.None -> Error(table.InvalidValue)
-    option.Some(_) -> Ok(config)
+    None -> Error(InvalidValue)
+    Some(_) -> Ok(config)
   }
 }
 
 fn build_ets_options(
   config: TableConfig(k, v),
-) -> Result(List(dynamic.Dynamic), table.EtsError) {
+) -> Result(List(Dynamic), EtsError) {
   let TableConfig(
     _,
     table_type,
@@ -1205,7 +1209,7 @@ fn build_ets_options(
   Ok(options_with_named)
 }
 
-fn table_type_to_atom(table_type: TableType) -> dynamic.Dynamic {
+fn table_type_to_atom(table_type: TableType) -> Dynamic {
   case table_type {
     Set -> atom.create("set") |> atom_to_dynamic
     OrderedSet -> atom.create("ordered_set") |> atom_to_dynamic
@@ -1214,7 +1218,7 @@ fn table_type_to_atom(table_type: TableType) -> dynamic.Dynamic {
   }
 }
 
-fn access_to_atom(access: Access) -> dynamic.Dynamic {
+fn access_to_atom(access: Access) -> Dynamic {
   case access {
     Public -> atom.create("public") |> atom_to_dynamic
     Protected -> atom.create("protected") |> atom_to_dynamic
@@ -1224,8 +1228,8 @@ fn access_to_atom(access: Access) -> dynamic.Dynamic {
 
 fn add_read_concurrency_option(
   enabled: Bool,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
+  options: List(Dynamic),
+) -> List(Dynamic) {
   case enabled {
     True -> [create_concurrency_tuple("read_concurrency", True), ..options]
     False -> options
@@ -1234,8 +1238,8 @@ fn add_read_concurrency_option(
 
 fn add_write_concurrency_option(
   enabled: Bool,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
+  options: List(Dynamic),
+) -> List(Dynamic) {
   case enabled {
     True -> [create_concurrency_tuple("write_concurrency", True), ..options]
     False -> options
@@ -1244,30 +1248,27 @@ fn add_write_concurrency_option(
 
 fn add_compressed_option(
   enabled: Bool,
-  options: List(dynamic.Dynamic),
-) -> List(dynamic.Dynamic) {
+  options: List(Dynamic),
+) -> List(Dynamic) {
   case enabled {
     True -> [atom.create("compressed") |> atom_to_dynamic, ..options]
     False -> options
   }
 }
 
-fn create_concurrency_tuple(
-  option_name: String,
-  value: Bool,
-) -> dynamic.Dynamic {
+fn create_concurrency_tuple(option_name: String, value: Bool) -> Dynamic {
   let key_atom = atom.create(option_name)
-  internal.to_dynamic(#(key_atom, value))
+  to_dynamic(#(key_atom, value))
 }
 
-fn atom_to_dynamic(a: atom.Atom) -> dynamic.Dynamic {
-  internal.to_dynamic(a)
+fn atom_to_dynamic(a: Atom) -> Dynamic {
+  to_dynamic(a)
 }
 
 fn create_table_with_options(
   config: TableConfig(k, v),
-  options: List(dynamic.Dynamic),
-) -> Result(table.Table(k, v), table.EtsError) {
+  options: List(Dynamic),
+) -> Result(Table(k, v), EtsError) {
   let TableConfig(
     name,
     _,
@@ -1281,28 +1282,19 @@ fn create_table_with_options(
     value_decoder,
   ) = config
 
-  let assert option.Some(encoder_k) = key_encoder
-  let assert option.Some(decoder_k) = key_decoder
-  let assert option.Some(encoder_v) = value_encoder
-  let assert option.Some(decoder_v) = value_decoder
+  let assert Some(encoder_k) = key_encoder
+  let assert Some(decoder_k) = key_decoder
+  let assert Some(encoder_v) = value_encoder
+  let assert Some(decoder_v) = value_decoder
 
   internal.new_table(name, options)
-  |> result.map(table.new_table(
-    _,
-    name,
-    encoder_k,
-    decoder_k,
-    encoder_v,
-    decoder_v,
-  ))
-  |> result.map_error(new_table_error_to_ets_error)
+  |> map(table.new_table(_, name, encoder_k, decoder_k, encoder_v, decoder_v))
+  |> map_error(new_table_error_to_ets_error)
 }
 
-fn new_table_error_to_ets_error(
-  error: internal.NewTableError,
-) -> table.EtsError {
+fn new_table_error_to_ets_error(error: NewTableError) -> EtsError {
   case error {
-    internal.NameInUse -> table.TableAlreadyExists
-    internal.OptionsRejected(message) -> table.OperationFailed(message)
+    NameInUse -> TableAlreadyExists
+    OptionsRejected(message) -> OperationFailed(message)
   }
 }

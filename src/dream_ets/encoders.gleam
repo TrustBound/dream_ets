@@ -122,9 +122,9 @@
 //// }
 //// ```
 
-import dream_ets/internal
-import gleam/dynamic
-import gleam/dynamic/decode
+import dream_ets/internal.{to_dynamic}
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode.{type Decoder, bool, float, int, string}
 
 /// Encode a string to Dynamic
 ///
@@ -159,8 +159,8 @@ import gleam/dynamic/decode
 ///
 /// - `string_decoder()` - Decode strings from storage
 /// - `config.key_string()` - Convenience function for string keys
-pub fn string_encoder(s: String) -> dynamic.Dynamic {
-  internal.to_dynamic(s)
+pub fn string_encoder(s: String) -> Dynamic {
+  to_dynamic(s)
 }
 
 /// Decode a string from Dynamic
@@ -192,8 +192,8 @@ pub fn string_encoder(s: String) -> dynamic.Dynamic {
 ///
 /// - `string_encoder()` - Encode strings for storage
 /// - `config.value_string()` - Convenience function for string values
-pub fn string_decoder() -> decode.Decoder(String) {
-  decode.string
+pub fn string_decoder() -> Decoder(String) {
+  string
 }
 
 /// Encode an integer to Dynamic
@@ -229,8 +229,8 @@ pub fn string_decoder() -> decode.Decoder(String) {
 ///
 /// - `int_decoder()` - Decode integers from storage
 /// - `config.counter()` - Convenience for counter tables
-pub fn int_encoder(i: Int) -> dynamic.Dynamic {
-  internal.to_dynamic(i)
+pub fn int_encoder(i: Int) -> Dynamic {
+  to_dynamic(i)
 }
 
 /// Decode an integer from Dynamic
@@ -261,8 +261,8 @@ pub fn int_encoder(i: Int) -> dynamic.Dynamic {
 /// ## See Also
 ///
 /// - `int_encoder()` - Encode integers for storage
-pub fn int_decoder() -> decode.Decoder(Int) {
-  decode.int
+pub fn int_decoder() -> Decoder(Int) {
+  int
 }
 
 /// Encode a boolean to Dynamic
@@ -297,8 +297,8 @@ pub fn int_decoder() -> decode.Decoder(Int) {
 /// ## See Also
 ///
 /// - `bool_decoder()` - Decode booleans from storage
-pub fn bool_encoder(b: Bool) -> dynamic.Dynamic {
-  internal.to_dynamic(b)
+pub fn bool_encoder(b: Bool) -> Dynamic {
+  to_dynamic(b)
 }
 
 /// Decode a boolean from Dynamic
@@ -329,8 +329,8 @@ pub fn bool_encoder(b: Bool) -> dynamic.Dynamic {
 /// ## See Also
 ///
 /// - `bool_encoder()` - Encode booleans for storage
-pub fn bool_decoder() -> decode.Decoder(Bool) {
-  decode.bool
+pub fn bool_decoder() -> Decoder(Bool) {
+  bool
 }
 
 /// Encode a float to Dynamic
@@ -365,8 +365,8 @@ pub fn bool_decoder() -> decode.Decoder(Bool) {
 /// ## See Also
 ///
 /// - `float_decoder()` - Decode floats from storage
-pub fn float_encoder(f: Float) -> dynamic.Dynamic {
-  internal.to_dynamic(f)
+pub fn float_encoder(f: Float) -> Dynamic {
+  to_dynamic(f)
 }
 
 /// Decode a float from Dynamic
@@ -397,6 +397,6 @@ pub fn float_encoder(f: Float) -> dynamic.Dynamic {
 /// ## See Also
 ///
 /// - `float_encoder()` - Encode floats for storage
-pub fn float_decoder() -> decode.Decoder(Float) {
-  decode.float
+pub fn float_decoder() -> Decoder(Float) {
+  float
 }

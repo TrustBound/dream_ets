@@ -32,11 +32,11 @@
 //// to/from Erlang's dynamic types for storage.
 
 import dream_errors.{type Error, Conflict, Failed, Invalid, NotFound}
-import dream_ets/internal
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/list
-import gleam/result
+import dream_ets/internal.{type EtsTableRef}
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode.{type Decoder, run}
+import gleam/list.{first}
+import gleam/result.{map_error, unwrap}
 
 /// Type-safe ETS table
 ///
@@ -75,12 +75,12 @@ import gleam/result
 /// ```
 pub opaque type Table(key, value) {
   Table(
-    table_ref: internal.EtsTableRef,
+    table_ref: EtsTableRef,
     name: String,
-    key_encoder: fn(key) -> dynamic.Dynamic,
-    key_decoder: decode.Decoder(key),
-    value_encoder: fn(value) -> dynamic.Dynamic,
-    value_decoder: decode.Decoder(value),
+    key_encoder: fn(key) -> Dynamic,
+    key_decoder: Decoder(key),
+    value_encoder: fn(value) -> Dynamic,
+    value_decoder: Decoder(value),
   )
 }
 
@@ -184,7 +184,7 @@ pub fn to_error(error: EtsError) -> Error(EtsError) {
 ///   Ok(loaded == table.table_ref(cache))
 /// }
 /// ```
-pub fn table_ref(table: Table(k, v)) -> internal.EtsTableRef {
+pub fn table_ref(table: Table(k, v)) -> EtsTableRef {
   let Table(ref, _, _, _, _, _) = table
   ref
 }
@@ -241,7 +241,7 @@ pub fn table_name(table: Table(k, v)) -> String {
 ///   table.encode_key(cache, "user:123")
 /// }
 /// ```
-pub fn encode_key(table: Table(k, v), key: k) -> dynamic.Dynamic {
+pub fn encode_key(table: Table(k, v), key: k) -> Dynamic {
   let Table(_, _, encoder, _, _, _) = table
   encoder(key)
 }
@@ -274,11 +274,11 @@ pub fn encode_key(table: Table(k, v), key: k) -> dynamic.Dynamic {
 /// ```
 pub fn decode_key(
   table: Table(k, v),
-  dyn: dynamic.Dynamic,
+  dyn: Dynamic,
 ) -> Result(k, decode.DecodeError) {
   let Table(_, _, _, decoder, _, _) = table
-  decode.run(dyn, decoder)
-  |> result.map_error(extract_first_decode_error)
+  run(dyn, decoder)
+  |> map_error(extract_first_decode_error)
 }
 
 fn extract_first_decode_error(
@@ -287,8 +287,8 @@ fn extract_first_decode_error(
   // A failed decode always reports at least one error. The fallback value
   // only makes the function total.
   errors
-  |> list.first
-  |> result.unwrap(decode.DecodeError("key", "decoding failed", []))
+  |> first
+  |> unwrap(decode.DecodeError("key", "decoding failed", []))
 }
 
 /// Encode a value for storage
@@ -315,7 +315,7 @@ fn extract_first_decode_error(
 ///   table.encode_value(cache, "Alice")
 /// }
 /// ```
-pub fn encode_value(table: Table(k, v), value: v) -> dynamic.Dynamic {
+pub fn encode_value(table: Table(k, v), value: v) -> Dynamic {
   let Table(_, _, _, _, encoder, _) = table
   encoder(value)
 }
@@ -348,11 +348,11 @@ pub fn encode_value(table: Table(k, v), value: v) -> dynamic.Dynamic {
 /// ```
 pub fn decode_value(
   table: Table(k, v),
-  dyn: dynamic.Dynamic,
+  dyn: Dynamic,
 ) -> Result(v, decode.DecodeError) {
   let Table(_, _, _, _, _, decoder) = table
-  decode.run(dyn, decoder)
-  |> result.map_error(extract_first_value_decode_error)
+  run(dyn, decoder)
+  |> map_error(extract_first_value_decode_error)
 }
 
 fn extract_first_value_decode_error(
@@ -361,8 +361,8 @@ fn extract_first_value_decode_error(
   // A failed decode always reports at least one error. The fallback value
   // only makes the function total.
   errors
-  |> list.first
-  |> result.unwrap(decode.DecodeError("value", "decoding failed", []))
+  |> first
+  |> unwrap(decode.DecodeError("value", "decoding failed", []))
 }
 
 /// Create a new Table instance
@@ -406,12 +406,12 @@ fn extract_first_value_decode_error(
 /// }
 /// ```
 pub fn new_table(
-  table_ref: internal.EtsTableRef,
+  table_ref: EtsTableRef,
   name: String,
-  key_encoder: fn(k) -> dynamic.Dynamic,
-  key_decoder: decode.Decoder(k),
-  value_encoder: fn(v) -> dynamic.Dynamic,
-  value_decoder: decode.Decoder(v),
+  key_encoder: fn(k) -> Dynamic,
+  key_decoder: Decoder(k),
+  value_encoder: fn(v) -> Dynamic,
+  value_decoder: Decoder(v),
 ) -> Table(k, v) {
   Table(
     table_ref: table_ref,

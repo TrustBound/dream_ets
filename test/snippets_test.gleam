@@ -5,16 +5,16 @@ import dream_errors.{NotFound}
 import dream_test/matchers.{be_equal, or_fail_with, should}
 import dream_test/suite.{type TestSuite}
 import dream_test/unit.{describe, it}
-import snippets/custom_types
-import snippets/doc_insert_new_race
-import snippets/doc_member
+import snippets/custom_types.{store_custom_type}
+import snippets/doc_insert_new_race.{insert_twice_each_way}
+import snippets/doc_member.{describe_users_before_and_after_delete}
 import snippets/doc_to_error.{find_name_in_deleted_table}
 
 pub fn tests() -> TestSuite {
   describe("snippets", [
     it("custom types returns the stored user", fn() {
       // Act
-      let result = custom_types.store_custom_type()
+      let result = store_custom_type()
 
       // Assert
       result
@@ -24,7 +24,7 @@ pub fn tests() -> TestSuite {
     }),
     it("member doc describes each member result", fn() {
       // Act
-      let result = doc_member.describe_users_before_and_after_delete()
+      let result = describe_users_before_and_after_delete()
 
       // Assert
       result
@@ -40,7 +40,7 @@ pub fn tests() -> TestSuite {
     }),
     it("insert_new doc inserts once each way", fn() {
       // Act
-      let result = doc_insert_new_race.insert_twice_each_way()
+      let result = insert_twice_each_way()
 
       // Assert
       result

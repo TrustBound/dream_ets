@@ -78,14 +78,18 @@
 //// and `write_concurrency` in table configuration for better performance
 //// under high concurrent load.
 
-import dream_ets/internal
+import dream_ets/internal.{
+  type EtsFfiError, type EtsTableRef, EmptyTable, EndOfTable, InvalidOperation,
+  SeveralObjects, delete_key, file2tab, insert, lookup, tab2file, take_one,
+  to_dynamic,
+}
 import dream_ets/table
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/int
-import gleam/list
-import gleam/option
-import gleam/result
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode.{type DecodeError, DecodeError, at, run}
+import gleam/int.{to_string}
+import gleam/list.{append, first, fold, length, reverse, try_map}
+import gleam/option.{type Option, None, Some}
+import gleam/result.{map_error, try, unwrap}
 
 /// Insert or update a key-value pair in the table
 ///
@@ -140,8 +144,8 @@ pub fn set(
   let object = #(encoded_key, encoded_value)
   let table_ref = table.table_ref(table)
 
-  internal.insert(table_ref, internal.to_dynamic(object))
-  |> result.map_error(ffi_error_to_ets_error)
+  insert(table_ref, to_dynamic(object))
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Lookup a value by key
@@ -186,15 +190,15 @@ pub fn set(
 pub fn get(
   table: table.Table(k, v),
   key: k,
-) -> Result(option.Option(v), table.EtsError) {
+) -> Result(Option(v), table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.lookup(table_ref, encoded_key) {
-    Ok([]) -> Ok(option.None)
+  case lookup(table_ref, encoded_key) {
+    Ok([]) -> Ok(None)
     Ok([dyn_object]) -> decode_lookup_result(table, dyn_object)
     Ok(dyn_objects) ->
-      Error(several_values_error(list.length(dyn_objects), "get_all"))
+      Error(several_values_error(length(dyn_objects), "get_all"))
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
@@ -249,7 +253,7 @@ pub fn get_all(
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.lookup(table_ref, encoded_key) {
+  case lookup(table_ref, encoded_key) {
     Ok(dyn_objects) -> decode_objects(table, dyn_objects)
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
@@ -291,8 +295,8 @@ pub fn delete(table: table.Table(k, v), key: k) -> Result(Nil, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  internal.delete_key(table_ref, encoded_key)
-  |> result.map_error(ffi_error_to_ets_error)
+  delete_key(table_ref, encoded_key)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Check if a key exists in the table
@@ -351,7 +355,7 @@ pub fn member(
   let table_ref = table.table_ref(table)
 
   internal.member(table_ref, encoded_key)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Delete the entire table
@@ -386,7 +390,7 @@ pub fn member(
 pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
   let table_ref = table.table_ref(table)
   internal.delete_table(table_ref)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Get the number of objects in the table
@@ -431,7 +435,7 @@ pub fn delete_table(table: table.Table(k, v)) -> Result(Nil, table.EtsError) {
 /// - `member()` - Check single key existence (O(1))
 pub fn size(table: table.Table(k, v)) -> Result(Int, table.EtsError) {
   internal.size(table.table_ref(table))
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Get all keys from the table
@@ -662,8 +666,8 @@ pub fn insert_new(
   let object = #(encoded_key, encoded_value)
   let table_ref = table.table_ref(table)
 
-  internal.insert_new(table_ref, internal.to_dynamic(object))
-  |> result.map_error(ffi_error_to_ets_error)
+  internal.insert_new(table_ref, to_dynamic(object))
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Lookup and delete a key-value pair atomically
@@ -782,14 +786,14 @@ pub fn insert_new(
 pub fn take(
   table: table.Table(k, v),
   key: k,
-) -> Result(option.Option(v), table.EtsError) {
+) -> Result(Option(v), table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
-  case internal.take_one(table_ref, encoded_key) {
+  case take_one(table_ref, encoded_key) {
     Ok([dyn_object]) -> decode_take_result(table, dyn_object)
-    Ok(_no_object) -> Ok(option.None)
-    Error(internal.SeveralObjects(count)) ->
+    Ok(_no_object) -> Ok(None)
+    Error(SeveralObjects(count)) ->
       Error(several_values_error(count, "take_all"))
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
@@ -902,13 +906,13 @@ pub fn update_element(
   table: table.Table(k, v),
   key: k,
   pos: Int,
-  value: dynamic.Dynamic,
+  value: Dynamic,
 ) -> Result(Bool, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   let table_ref = table.table_ref(table)
 
   internal.update_element(table_ref, encoded_key, pos, value)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Delete every object from the table
@@ -954,7 +958,7 @@ pub fn delete_all_objects(
 ) -> Result(Nil, table.EtsError) {
   let table_ref = table.table_ref(table)
   internal.delete_all_objects(table_ref)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Find the objects that match an Erlang match pattern
@@ -1003,11 +1007,11 @@ pub fn delete_all_objects(
 /// - [ets:match/2](https://www.erlang.org/doc/apps/stdlib/ets.html#match/2)
 pub fn match(
   table: table.Table(k, v),
-  pattern: dynamic.Dynamic,
-) -> Result(List(dynamic.Dynamic), table.EtsError) {
+  pattern: Dynamic,
+) -> Result(List(Dynamic), table.EtsError) {
   let table_ref = table.table_ref(table)
   internal.match(table_ref, pattern)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Find the whole objects that match an Erlang match pattern
@@ -1052,11 +1056,11 @@ pub fn match(
 /// - [ets:match_object/2](https://www.erlang.org/doc/apps/stdlib/ets.html#match_object/2)
 pub fn match_object(
   table: table.Table(k, v),
-  pattern: dynamic.Dynamic,
-) -> Result(List(dynamic.Dynamic), table.EtsError) {
+  pattern: Dynamic,
+) -> Result(List(Dynamic), table.EtsError) {
   let table_ref = table.table_ref(table)
   internal.match_object(table_ref, pattern)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Query the table with an Erlang match specification
@@ -1110,11 +1114,11 @@ pub fn match_object(
 /// - [ets:select/2](https://www.erlang.org/doc/apps/stdlib/ets.html#select/2)
 pub fn select(
   table: table.Table(k, v),
-  match_spec: dynamic.Dynamic,
-) -> Result(List(dynamic.Dynamic), table.EtsError) {
+  match_spec: Dynamic,
+) -> Result(List(Dynamic), table.EtsError) {
   let table_ref = table.table_ref(table)
   internal.select(table_ref, match_spec)
-  |> result.map_error(ffi_error_to_ets_error)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Save the table to a file
@@ -1164,8 +1168,8 @@ pub fn save_to_file(
   filename: String,
 ) -> Result(Nil, table.EtsError) {
   let table_ref = table.table_ref(table)
-  internal.tab2file(table_ref, filename)
-  |> result.map_error(ffi_error_to_ets_error)
+  tab2file(table_ref, filename)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Load a table from a file
@@ -1209,20 +1213,18 @@ pub fn save_to_file(
 /// ## See Also
 ///
 /// - `save_to_file()` - Write the file
-pub fn load_from_file(
-  filename: String,
-) -> Result(internal.EtsTableRef, table.EtsError) {
-  internal.file2tab(filename)
-  |> result.map_error(ffi_error_to_ets_error)
+pub fn load_from_file(filename: String) -> Result(EtsTableRef, table.EtsError) {
+  file2tab(filename)
+  |> map_error(ffi_error_to_ets_error)
 }
 
 /// Converts an FFI error to the public `EtsError`. Each caller first handles
 /// the FFI errors that have a meaning of their own for it (`SeveralObjects`,
 /// `EmptyTable`, `EndOfTable`), so only `TableNotFound` and
 /// `InvalidOperation` arrive here.
-fn ffi_error_to_ets_error(error: internal.EtsFfiError) -> table.EtsError {
+fn ffi_error_to_ets_error(error: EtsFfiError) -> table.EtsError {
   case error {
-    internal.InvalidOperation(message) -> table.OperationFailed(message)
+    InvalidOperation(message) -> table.OperationFailed(message)
     _ -> table.TableNotFound
   }
 }
@@ -1231,8 +1233,8 @@ fn ffi_error_to_ets_error(error: internal.EtsFfiError) -> table.EtsError {
 
 fn decode_lookup_result(
   table: table.Table(k, v),
-  dyn_object: dynamic.Dynamic,
-) -> Result(option.Option(v), table.EtsError) {
+  dyn_object: Dynamic,
+) -> Result(Option(v), table.EtsError) {
   case extract_value_from_tuple(table, dyn_object) {
     Ok(dyn_value) -> decode_value_to_option(table, dyn_value)
     Error(err) -> Error(err)
@@ -1241,8 +1243,8 @@ fn decode_lookup_result(
 
 fn decode_take_result(
   table: table.Table(k, v),
-  dyn_object: dynamic.Dynamic,
-) -> Result(option.Option(v), table.EtsError) {
+  dyn_object: Dynamic,
+) -> Result(Option(v), table.EtsError) {
   case extract_value_from_tuple(table, dyn_object) {
     Ok(dyn_value) -> decode_value_to_option(table, dyn_value)
     Error(err) -> Error(err)
@@ -1252,68 +1254,68 @@ fn decode_take_result(
 // The values of the objects of one key, in ETS order.
 fn decode_objects(
   table: table.Table(k, v),
-  dyn_objects: List(dynamic.Dynamic),
+  dyn_objects: List(Dynamic),
 ) -> Result(List(v), table.EtsError) {
-  list.try_map(dyn_objects, fn(dyn_object) {
-    use dyn_value <- result.try(extract_value_from_tuple(table, dyn_object))
+  try_map(dyn_objects, fn(dyn_object) {
+    use dyn_value <- try(extract_value_from_tuple(table, dyn_object))
     table.decode_value(table, dyn_value)
-    |> result.map_error(table.DecodeError)
+    |> map_error(table.DecodeError)
   })
 }
 
 // The error of `get` and `take` for a key with more than one value.
 fn several_values_error(count: Int, function: String) -> table.EtsError {
   table.OperationFailed(
-    "the key has " <> int.to_string(count) <> " values, use " <> function,
+    "the key has " <> to_string(count) <> " values, use " <> function,
   )
 }
 
 fn extract_value_from_tuple(
   _table: table.Table(k, v),
-  dyn_object: dynamic.Dynamic,
-) -> Result(dynamic.Dynamic, table.EtsError) {
+  dyn_object: Dynamic,
+) -> Result(Dynamic, table.EtsError) {
   // ETS returns tuples as {Key, Value} in Erlang
   // When decoded through Dynamic, we need to extract the second element (index 1)
   // Use decode.at to access tuple elements
-  decode.run(dyn_object, decode.at([1], decode.dynamic))
-  |> result.map_error(first_decode_error)
+  run(dyn_object, at([1], decode.dynamic))
+  |> map_error(first_decode_error)
 }
 
 /// A failed decode always reports at least one error. The fallback value
 /// only makes the function total.
-fn first_decode_error(errors: List(decode.DecodeError)) -> table.EtsError {
+fn first_decode_error(errors: List(DecodeError)) -> table.EtsError {
   errors
-  |> list.first
-  |> result.unwrap(decode.DecodeError("tuple", "failed to extract value", []))
+  |> first
+  |> unwrap(DecodeError("tuple", "failed to extract value", []))
   |> table.DecodeError
 }
 
 fn decode_value_to_option(
   table: table.Table(k, v),
-  dyn_value: dynamic.Dynamic,
-) -> Result(option.Option(v), table.EtsError) {
+  dyn_value: Dynamic,
+) -> Result(Option(v), table.EtsError) {
   case table.decode_value(table, dyn_value) {
-    Ok(value) -> Ok(option.Some(value))
+    Ok(value) -> Ok(Some(value))
     Error(decode_err) -> Error(table.DecodeError(decode_err))
   }
 }
 
 fn collect_all_keys(
   table: table.Table(k, v),
-  table_ref: internal.EtsTableRef,
+  table_ref: EtsTableRef,
 ) -> Result(List(k), table.EtsError) {
   case internal.first_key(table_ref) {
     Ok(first_dyn_key) ->
       collect_keys_from_first(table, table_ref, first_dyn_key)
-    Error(internal.EmptyTable) -> Ok([])
+    Error(EmptyTable) -> Ok([])
     Error(err) -> Error(ffi_error_to_ets_error(err))
   }
 }
 
 fn collect_keys_from_first(
   table: table.Table(k, v),
-  table_ref: internal.EtsTableRef,
-  first_dyn_key: dynamic.Dynamic,
+  table_ref: EtsTableRef,
+  first_dyn_key: Dynamic,
 ) -> Result(List(k), table.EtsError) {
   case table.decode_key(table, first_dyn_key) {
     Ok(first_key) ->
@@ -1324,19 +1326,16 @@ fn collect_keys_from_first(
 
 fn collect_remaining_keys(
   table: table.Table(k, v),
-  table_ref: internal.EtsTableRef,
-  current_dyn_key: dynamic.Dynamic,
+  table_ref: EtsTableRef,
+  current_dyn_key: Dynamic,
   acc: List(k),
 ) -> Result(List(k), table.EtsError) {
   case internal.next_key(table_ref, current_dyn_key) {
-    Error(internal.EndOfTable) -> Ok(list.reverse(acc))
+    Error(EndOfTable) -> Ok(reverse(acc))
     // Another error comes only when a second process deletes the table
     // during the walk.
     next -> {
-      use next_dyn_key <- result.try(result.map_error(
-        next,
-        ffi_error_to_ets_error,
-      ))
+      use next_dyn_key <- try(map_error(next, ffi_error_to_ets_error))
       case table.decode_key(table, next_dyn_key) {
         Ok(next_key) ->
           collect_remaining_keys(table, table_ref, next_dyn_key, [
@@ -1351,9 +1350,9 @@ fn collect_remaining_keys(
 
 fn collect_all_values(
   table: table.Table(k, v),
-  table_ref: internal.EtsTableRef,
+  table_ref: EtsTableRef,
 ) -> Result(List(v), table.EtsError) {
-  use keys_list <- result.try(collect_all_keys(table, table_ref))
+  use keys_list <- try(collect_all_keys(table, table_ref))
   collect_values_for_keys(table, keys_list, [])
 }
 
@@ -1363,20 +1362,15 @@ fn collect_values_for_keys(
   acc: List(v),
 ) -> Result(List(v), table.EtsError) {
   case keys {
-    [] -> Ok(list.reverse(acc))
+    [] -> Ok(reverse(acc))
     [key, ..rest] -> {
-      use values <- result.try(get_all(table, key))
+      use values <- try(get_all(table, key))
       case values {
         [] ->
           Error(table.OperationFailed(
             "Key disappeared during iteration (concurrent delete?)",
           ))
-        _ ->
-          collect_values_for_keys(
-            table,
-            rest,
-            list.append(list.reverse(values), acc),
-          )
+        _ -> collect_values_for_keys(table, rest, append(reverse(values), acc))
       }
     }
   }
@@ -1384,9 +1378,9 @@ fn collect_values_for_keys(
 
 fn collect_all_pairs(
   table: table.Table(k, v),
-  table_ref: internal.EtsTableRef,
+  table_ref: EtsTableRef,
 ) -> Result(List(#(k, v)), table.EtsError) {
-  use keys_list <- result.try(collect_all_keys(table, table_ref))
+  use keys_list <- try(collect_all_keys(table, table_ref))
   collect_pairs_for_keys(table, keys_list, [])
 }
 
@@ -1396,9 +1390,9 @@ fn collect_pairs_for_keys(
   acc: List(#(k, v)),
 ) -> Result(List(#(k, v)), table.EtsError) {
   case keys {
-    [] -> Ok(list.reverse(acc))
+    [] -> Ok(reverse(acc))
     [key, ..rest] -> {
-      use values <- result.try(get_all(table, key))
+      use values <- try(get_all(table, key))
       case values {
         [] ->
           Error(table.OperationFailed(
@@ -1408,7 +1402,7 @@ fn collect_pairs_for_keys(
           collect_pairs_for_keys(
             table,
             rest,
-            list.fold(values, acc, fn(pairs, value) { [#(key, value), ..pairs] }),
+            fold(values, acc, fn(pairs, value) { [#(key, value), ..pairs] }),
           )
       }
     }

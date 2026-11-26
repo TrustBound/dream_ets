@@ -33,9 +33,9 @@
 //// - Need specific configuration (concurrency, compression, etc.)
 //// - Fine-grained control over table behavior
 
-import dream_ets/config
-import dream_ets/internal
-import dream_ets/operations
+import dream_ets/config.{counter, create, key_string, new, value_string}
+import dream_ets/internal.{InvalidOperation, to_dynamic, update_counter}
+import dream_ets/operations.{get}
 import dream_ets/table
 
 /// Create a counter table (String keys, Int values)
@@ -94,9 +94,9 @@ import dream_ets/table
 pub fn new_counter(
   name: String,
 ) -> Result(table.Table(String, Int), table.EtsError) {
-  config.new(name)
-  |> config.counter()
-  |> config.create()
+  new(name)
+  |> counter()
+  |> create()
 }
 
 /// Create a string-to-string table
@@ -160,10 +160,10 @@ pub fn new_counter(
 pub fn new_string_table(
   name: String,
 ) -> Result(table.Table(String, String), table.EtsError) {
-  config.new(name)
-  |> config.key_string()
-  |> config.value_string()
-  |> config.create()
+  new(name)
+  |> key_string()
+  |> value_string()
+  |> create()
 }
 
 /// Atomically increment a counter value
@@ -285,18 +285,12 @@ pub fn increment_by(
 ) -> Result(Int, table.EtsError) {
   let encoded_key = table.encode_key(table, key)
   // A key that is not in the table starts at 0
-  let default_object =
-    internal.to_dynamic(#(encoded_key, table.encode_value(table, 0)))
+  let default_object = to_dynamic(#(encoded_key, table.encode_value(table, 0)))
   case
-    internal.update_counter(
-      table.table_ref(table),
-      encoded_key,
-      amount,
-      default_object,
-    )
+    update_counter(table.table_ref(table), encoded_key, amount, default_object)
   {
     Ok(new_value) -> Ok(new_value)
-    Error(internal.InvalidOperation(message)) ->
+    Error(InvalidOperation(message)) ->
       refused_update_error(table, key, message)
     // The FFI of update_counter only returns InvalidOperation and
     // TableNotFound
@@ -313,7 +307,7 @@ fn refused_update_error(
   key: String,
   message: String,
 ) -> Result(Int, table.EtsError) {
-  case operations.get(table, key) {
+  case get(table, key) {
     Ok(_) -> Error(table.OperationFailed(message))
     Error(error) -> Error(error)
   }
